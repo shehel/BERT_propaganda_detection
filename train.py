@@ -101,7 +101,7 @@ def main():
     ]
     # t_total matters
     optimizer = BertAdam(optimizer_grouped_parameters,
-                         lr=learning_rate,
+                         lr=opt.LR,
                          warmup=warmup_proportion,
                          t_total=num_train_optimization_steps) 
     
