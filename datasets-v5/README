@@ -1,0 +1,187 @@
+---------------------------------
+"Hack the News Datathon" Datasets
+
+Version 5.0: January 25, 2019
+---------------------------------
+
+NOTE v4: Fixed some encoding issues, which affected the annotations for tasks 2 and 3.
+
+NOTE v5: Fixed some minor issues for Task 3 
+         in article783702663.task3.labels and article111111132.task3.labels
+
+
+---------------
+Task Organizers
+---------------
+
+- Giovanni Da San Martino
+- Alberto Barron-Cedeno
+- Preslav Nakov
+- Laura Tolosi–Halacheva
+- Viktor Senderov
+
+----------------
+Task Description
+----------------
+
+This file describes the data for the "Hack the News Datathon".
+See its website for more detail:
+
+	https://www.datasciencesociety.net/datathon/
+	https://www.datasciencesociety.net/hack-news-datathon-case-propaganda-detection/
+
+The datathon is about detecting the use of propaganda in news articles. 
+It features three tasks:
+
+Task 1: Propaganda detection at the article level (PAL). 
+	This is a classical supervised document classification problem. 
+You are given a set of news articles, and you have to classify each article as
+“propagandistic article” vs. “non-propagandistic article.”
+
+Task 2: Propaganda detection at the sentence level (PSL). 
+	This is another classification task, but of different granularity. 
+The objective is to classify each sentence in a news article as either
+“any propaganda technique is used in the sentence” or 
+“the sentence contains no propaganda.”
+
+Task 3: Propaganda type recognition (PTR). 
+	This task is similar to the task of Named Entity Recognition,
+but applied in the propaganda detection setting.
+The goal is to detect the occurrences of propagandistic techniques in the text
+and to correctly assign a type of propaganda to each text fragment.
+The inventory of possible techniques is described here:
+
+	http://propaganda.qcri.org/annotations/definitions.html
+
+-----------
+File Format
+-----------
+
+- Input File Format
+
+	- Task 1: 3-column TAB-separated format: 
+		1) the first column contains the title and the contents of the article
+			(the newlines in the original article have been replace with two spaces); 
+		2) the second column is the article id; 
+		3) the third column is the label of the article. Possible values are 
+			"propaganda", "non-propaganda" and "?" (the question mark 
+			replaces the labels in the development and test sets)
+
+	- Task 2: one file per news article. Each file contains the title and 
+		the content of the article, split by sentences (one row per sentence). 
+		The sentence splitting is performed automatically using the NLTK package.
+
+	- Task 3: the same set of articles for task 2 is used as input for task 3.
+
+
+- Output File Format	
+
+	- Task 1: a 2-column TAB-separated file with the following format
+
+		<article id>	<label>
+
+		where the article ID is the value in the second column of the 
+		corresponding input file, label={propaganda, non-propaganda}
+		Here is an example row of the output file:
+
+			727600136	non-propaganda
+
+	- Task 2: a 3-column TAB-separated file with the following format
+
+		<article id>	<sentence id>	<label>
+
+		where the article ID can be found in the input file name, 
+		the sentence ID for the i-th sentence is i (the first sentence has id 1),
+		and label={propaganda, non-propaganda}
+		One example row of the output file, related to the input file 
+		"article755393220.txt" is the following:
+
+		755393220	1	propaganda
+
+		For each article, we provide a file with a template of the output 
+		format related to that article. For example, the predictions related 
+		to article755393220.txt should appear in article755393220.task2.labels.
+		We also provide two files as a template for a submission:
+		"dev.task2.labels.template", "test.task2.labels.template".
+		To make a submission, it is enough to replace the "?" in these two files
+		with a predicted label: "propaganda" or "non-propaganda".
+	
+	- Task 3: a 4-column TAB-separated file with the following format
+
+		<article id>	<propaganda technique name>	<fragment start position>	<fragment end position>
+
+		where the article ID can be found in the input file name, the
+		name of the propaganda technique is one of the strings in the file
+		task2-3/propaganda-techniques-names.txt,
+		the fragment start position is the index of the first character of the fragment
+		(the first character in the input file has index 0),
+		while the fragment end position is the ending character of the fragment.
+		A span [1,3] means that the fragment refers to the 2nd (because counting from 0), 
+		and the 3rd characters (only two characters, as the last index is excluded)
+		of the input file. E.g., [1,3] would refer to the string "el" in the string "Hello".
+		Another example: if the file starts with "You are such a baby!",
+		the interval [15,19] would refer to "baby".
+		Here is an example row of the output file, for input file "article755393220.txt":
+
+		755393220	Loaded_Language	1726	1731	
+
+		Notice that, if for the same article id, the output file has at least two overlapping 
+		fragments flagged with the same propaganda technique, our scoring system will not 
+		accept it. 
+
+--------------------------
+Folder Content Description
+--------------------------
+
+- "task1" contains the data related to Task 1
+
+	- task1.train.txt: training set for Task 1 
+	- task1.dev.txt: development set for Task 1
+	- task1.test.txt: test set for Task 1
+	The format of these files is described above in section 
+	'File Format' -> 'Input File Format' -> 'Task 1'
+
+- "task2-3" contains the the data related to Tasks 2 and 3
+
+	- propaganda-techniques-names.txt: it contains the strings that identify 
+		the propaganda techniques. When writing prediction for Task 3, 
+		the exact strings listed in this file have to be used.
+
+	- train: folder containing the training set for Tasks 2 and 3. 
+		Each file whose name ends in "*.txt" in that folder 
+                contains the title and content of one article.
+                The format of these files is described above in section
+        		'File Format' -> 'Input File Format' -> 'Task 2'.
+		Each file ending in "*.task2.labels" contains the predictions 
+		for Task 2 for the corresponding article. 
+		Each file ending in "*.task3.labels" contains the predictions for Task 3	
+		for the corresponding article.
+
+	- dev: folder containing the development set for Tasks 2 and 3. Each "*.txt" 
+		file has the same format as the training set
+		(see 'File Format' -> 'Input File Format' -> 'Task 2').
+		Each file ending in "*.task2.labels" is the template of the prediction 
+		for that single article (where the labels "propaganda", "non-propaganda"
+		are replaced with "?").  
+
+	- test: folder containing the test set for Tasks 2 and 3. Each "*.txt" file has 
+		the same format as the training set
+			(see 'File Format' -> 'Input File Format' -> 'Task 2'). 
+			Each file ending in "*.task2.labels" is the template 
+			for the prediction for that single article 
+			(where the labels "propaganda", "non-propaganda" are replaced with "?"). 
+
+	- dev.task2.labels.template: a sample prediction file for Task 2 for the whole 
+					development set in which the sentence labels are 
+					replaced with "?"  
+
+	- test.task2.labels.template: a sample prediction file for Task 2 for the whole
+					development set in which the sentence labels are
+					replaced with "?"
+
+---------
+Licensing
+---------
+
+The accompanying dataset is released under a Creative Commons Attribution 3.0 Unported 
+License (http://creativecommons.org/licenses/by/3.0/).
