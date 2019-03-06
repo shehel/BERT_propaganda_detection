@@ -28,6 +28,7 @@ def main():
 
     tokenizer = BertTokenizer.from_pretrained(opt.model, do_lower_case=opt.lowerCase);
 
+    # Load Tokenized train and validation datasets
     trn_tokenized_texts, trn_label_l, tr_inputs, tr_tags, tr_masks = make_set(opt.trainDataset, tokenizer)
     val_tokenized_texts, val_label_l, val_inputs, val_tags, val_masks = make_set(opt.valDataset, tokenizer)
     logging.info("Dataset loaded")
@@ -81,15 +82,11 @@ def main():
             except FileNotFoundError:
                 os.mkdir("./exp/{}".format(opt.classType))
                 os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
-   
-    epochs = opt.nEpochs
 
     loss_scale = 0
     warmup_proportion = 0.1
-    num_train_optimization_steps = int(len(train_data) / opt.trainBatch ) * epochs; num_train_optimization_steps
+    num_train_optimization_steps = int(len(train_data) / opt.trainBatch ) * epochs
     
-    
-
     # Prepare optimizer
     param_optimizer = list(model.named_parameters())
 
@@ -142,8 +139,8 @@ def main():
                         attention_mask=b_input_mask, labels=b_labels)
             if n_gpu > 1:
                 loss = loss.mean()
+            
             # backward pass
-        
             loss.backward()
 
             tr_loss += loss.item()
@@ -189,8 +186,12 @@ def main():
         print("F1 Macro ", f1_macro)
         #scheduler.step(f1_macro)
         print(optimizer.get_lr()[0])
+        
+        #TODO save checkpoints
+        #Save model based on best F1 score
         if f1_macro > best:
         # Save a trained model and the associated configuration
+        #TODO store configuration file
             model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
             output_model_file = os.path.join("./exp/{}/{}".format(opt.classType, opt.expID), "best_model.pth")
             torch.save(model_to_save.state_dict(), output_model_file)

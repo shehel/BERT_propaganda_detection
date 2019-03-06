@@ -7,6 +7,7 @@ from keras.preprocessing.sequence import pad_sequences
 hash_token = 19
 end_token = 20
 
+
 def reg_encoding(cleaned, labels):
     label_l = []
     for oindex, x in enumerate(cleaned):

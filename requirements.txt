@@ -1,0 +1,10 @@
+torch
+pytorch-pretrained-bert
+spacy
+scikit-learn
+keras
+ast
+itertools
+tqdm
+numpy
+pandas

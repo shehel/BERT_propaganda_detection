@@ -7,7 +7,6 @@ import pandas as pd
 import torch
 from pytorch_pretrained_bert import (BasicTokenizer, BertConfig,
                                      BertForTokenClassification, BertTokenizer)
-from pytorch_pretrained_bert.optimization import BertAdam, warmup_linear
 from sklearn.metrics import f1_score
 from sklearn.metrics import precision_recall_fscore_support as f1
 from sklearn.model_selection import train_test_split
@@ -153,7 +152,7 @@ PROPAGANDA_TYPES = [
 ]
 def main():
     MAX_LEN = 210
-    bs = 1
+    bs = 4
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     n_gpu = torch.cuda.device_count(); 
     logging.info("GPUs Detected: %s" % (n_gpu))
