@@ -85,7 +85,7 @@ def main():
 
     loss_scale = 0
     warmup_proportion = 0.1
-    num_train_optimization_steps = int(len(train_data) / opt.trainBatch ) * epochs
+    num_train_optimization_steps = int(len(train_data) / opt.trainBatch ) * opt.nEpochs
     
     # Prepare optimizer
     param_optimizer = list(model.named_parameters())
@@ -124,7 +124,7 @@ def main():
     tr_loss = 0
     max_grad_norm = 1.0
     best = 0
-    for _ in trange(epochs, desc="Epoch"):
+    for _ in trange(opt.nEpochs, desc="Epoch"):
         # TRAIN loop
         #scheduler.step()
         model.train()
