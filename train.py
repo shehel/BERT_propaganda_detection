@@ -103,8 +103,7 @@ def main():
     optimizer = BertAdam(optimizer_grouped_parameters,
                          lr=opt.LR,
                          warmup=warmup_proportion,
-                         t_total=-1,
-                         max_grad_norm=1.0)    
+                         t_total=num_train_optimization_steps) 
     
     model.to(device)
     
