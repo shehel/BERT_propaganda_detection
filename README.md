@@ -2,7 +2,7 @@
 Sequence classification for propaganda dataset (QCRI)
 
 1. pip install -r requirements.txt 
-2. run python -m spacy download en
+2. Run python -m spacy download en
 3. dataset_train.csv and dataset_dev.csv are created from datasets_v5 by running preprocess.py on it. To create a different 
 dataset, change the parameters appropriately in preprocess.py.
 4. Create folder ./exp/all_classes/ - This is where the logs and model states will be stored for training runs. 
