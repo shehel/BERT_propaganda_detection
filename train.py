@@ -90,7 +90,7 @@ def main():
     # Prepare optimizer
     param_optimizer = list(model.named_parameters())
 
-    # hack to remove pooler, which is not used
+    # hack to remove pooler, which is not usedpython train.py --expID test --trainDataset dataset_train.csv --valDataset dataset_dev.csv --model bert-base-cased --LR 3e-5 --trainBatch 12 --nEpochs 1
     # thus it produce None grad that break apex
     param_optimizer = [n for n in param_optimizer if 'pooler' not in n[0]]
 
