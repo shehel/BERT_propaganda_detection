@@ -157,16 +157,16 @@ def main():
     n_gpu = torch.cuda.device_count(); 
     logging.info("GPUs Detected: %s" % (n_gpu))
 
-    tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False);
+    tokenizer = BertTokenizer.from_pretrained('bert-large-cased', do_lower_case=False);
     # Model Initialize
-    model = BertForTokenClassification.from_pretrained('bert-base-cased', num_labels=opt.nLabels);
+    model = BertForTokenClassification.from_pretrained('bert-large-cased', num_labels=opt.nLabels);
     
     model.to(device)
-    model.load_state_dict(torch.load("./exp/all_class/test/best_model.pth"))
+    model.load_state_dict(torch.load("./exp/all_class/large_50/best_model.pth"))
     #directory = pathlib.Path('./data/final/test/')
     #ids, texts, _ = read_data(directory, isLabels=False)
     
-    ds = pickle.load( open( "save.p", "rb" ) )
+    ds = pickle.load( open( "dataset_test.p", "rb" ) )
 
     texts = ds["Text"]
     ids = ds["ID"]
@@ -241,7 +241,7 @@ def main():
                 lists.append(span[1])
                 listp.append(span[0])
 
-    df = {"ID": listid, "P": listp, "s": lists, "liste": liste}
+    df = {"ID": listid, "P": listp, "s": liste, "liste": lists}
 
     df = pd.DataFrame(df)
 
