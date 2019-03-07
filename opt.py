@@ -14,8 +14,10 @@ parser.add_argument('--snapshot', default=1, type=int,
                     help='How often to take a snapshot of the model (0 = never)')
 parser.add_argument('--classType', default="all_class", type=str,
                     help='all_class | single_label | binary')
+parser.add_argument('--outputFile', default="pred_local.csv", type=str,
+                    help='Directory and name of the file to store predictions.')
 "----------------------------- Model options -----------------------------"
-parser.add_argument('--model', default=None, type=str,
+parser.add_argument('--model', default=bert-large-cased, type=str,
                     help='Select a model to be trained: bert-base-cased|bert-base-uncased|bert-large-uncased|bert-large-cased')
 parser.add_argument('--lowerCase', default=False, type=bool,
                     help='Set to true if using a uncased model')
