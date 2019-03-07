@@ -18,7 +18,7 @@ from tqdm import tqdm, trange
 import os 
 from opt import opt
 import itertools
-import subroutine
+#import subroutine
 
 logging.basicConfig(level=logging.INFO)
 
@@ -156,9 +156,9 @@ def main():
     n_gpu = torch.cuda.device_count(); 
     logging.info("GPUs Detected: %s" % (n_gpu))
 
-    tokenizer = BertTokenizer.from_pretrained(opt.model, do_lower_case=opt.lowerCase);
+    tokenizer = BertTokenizer.from_pretrained('bert-large-cased', do_lower_case=opt.lowerCase);
     # Model Initialize
-    model = BertForTokenClassification.from_pretrained(opt.model, num_labels=opt.nLabels);
+    model = BertForTokenClassification.from_pretrained('bert-large-cased', num_labels=opt.nLabels);
     
     model.to(device)
     model.load_state_dict(torch.load(opt.loadModel))
@@ -248,7 +248,7 @@ def main():
     
     logging.info("Predictions written to: %s" % (opt.outputFile))
 
-    subprocess.call("tools/task3_scorer_onefile.py -r ../datasets-v5/tasks-2-3/dev/ -s ../"+opt.outputFile, shell=True)
+#    subprocess.call("tools/task3_scorer_onefile.py -r ../datasets-v5/tasks-2-3/dev/ -s ../"+opt.outputFile, shell=True)
 
 if __name__ == '__main__':
     main()
