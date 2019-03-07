@@ -18,6 +18,7 @@ from tqdm import tqdm, trange
 import os 
 from opt import opt
 import itertools
+import subroutine
 
 logging.basicConfig(level=logging.INFO)
 
@@ -151,18 +152,16 @@ PROPAGANDA_TYPES = [
     "Whataboutism"
 ]
 def main():
-    MAX_LEN = 210
-    bs = 4
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     n_gpu = torch.cuda.device_count(); 
     logging.info("GPUs Detected: %s" % (n_gpu))
 
-    tokenizer = BertTokenizer.from_pretrained('bert-large-cased', do_lower_case=False);
+    tokenizer = BertTokenizer.from_pretrained(opt.model, do_lower_case=opt.lowerCase);
     # Model Initialize
-    model = BertForTokenClassification.from_pretrained('bert-large-cased', num_labels=opt.nLabels);
+    model = BertForTokenClassification.from_pretrained(opt.model, num_labels=opt.nLabels);
     
     model.to(device)
-    model.load_state_dict(torch.load("./exp/all_class/large_50/best_model.pth"))
+    model.load_state_dict(torch.load(opt.loadModel))
     #directory = pathlib.Path('./data/final/test/')
     #ids, texts, _ = read_data(directory, isLabels=False)
     
@@ -190,7 +189,7 @@ def main():
     tokenized_texts = [concatenate_list_data(sent) for sent in cleaned]
 
     numerics = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
-                            maxlen=MAX_LEN, dtype="long", truncating="post", padding="post")
+                            maxlen=opt.maxLen, dtype="long", truncating="post", padding="post")
 
     attention_masks = [[float(i>0) for i in ii] for ii in numerics]
 
@@ -198,12 +197,12 @@ def main():
     t_masks = torch.tensor(attention_masks)
 
     t_data = TensorDataset(t_inputs, t_masks)
-    t_dataloader = DataLoader(t_data, sampler=None, batch_size=bs)
+    t_dataloader = DataLoader(t_data, sampler=None, batch_size=opt.validBatch)
 
     model.eval()
     predictions_sample = []
 
-    for batch in t_dataloader:
+    for batch in tqdm(t_dataloader, desc="Predicting"):
         #ipdb.set_trace()
         batch = tuple(t.to(device) for t in batch)
         b_input_ids, b_input_mask= batch
@@ -245,8 +244,11 @@ def main():
 
     df = pd.DataFrame(df)
 
-    df.to_csv('predictions_localx.csv', sep='\t', index=False, header=False) 
+    df.to_csv(opt.outputFile, sep='\t', index=False, header=False) 
     
+    logging.info("Predictions written to: %s" % (opt.outputFile))
+
+    subprocess.call("tools/task3_scorer_onefile.py -r ../datasets-v5/tasks-2-3/dev/ -s ../"+opt.outputFile, shell=True)
 
 if __name__ == '__main__':
     main()
