@@ -156,12 +156,14 @@ def main():
     n_gpu = torch.cuda.device_count(); 
     logging.info("GPUs Detected: %s" % (n_gpu))
 
-    tokenizer = BertTokenizer.from_pretrained('bert-large-cased', do_lower_case=opt.lowerCase);
+    tokenizer = BertTokenizer.from_pretrained(opt.model, do_lower_case=opt.lowerCase);
     # Model Initialize
-    model = BertForTokenClassification.from_pretrained('bert-large-cased', num_labels=opt.nLabels);
+    model = BertForTokenClassification.from_pretrained(opt.model, num_labels=opt.nLabels);
     
     model.to(device)
     model.load_state_dict(torch.load(opt.loadModel))
+    
+    
     #directory = pathlib.Path('./data/final/test/')
     #ids, texts, _ = read_data(directory, isLabels=False)
     

@@ -19,9 +19,22 @@ import os
 from opt import opt
 import itertools
 
-logging.basicConfig(level=logging.INFO)
+def make_logger():
+    if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
+            try:
+                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
+            except FileNotFoundError:
+                os.mkdir("./exp/{}".format(opt.classType))
+                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
+            
+    logging.basicConfig(
+        filename= ("./exp/{}/{}/log.txt".format(opt.classType, opt.expID)),
+        filemode='a',
+        level=logging.INFO,
+        format='%(asctime)s, %(message)s')
 
 def main():
+    make_logger()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     n_gpu = torch.cuda.device_count(); 
     logging.info("GPUs Detected: %s" % (n_gpu))
@@ -35,6 +48,9 @@ def main():
     logging.info("Labels detected in train dataset: %s" % (np.unique(tr_tags)))
     logging.info("Labels detected in val dataset: %s" % (np.unique(val_tags)))
 
+    tr_inputs = tr_inputs[:100]
+    tr_tags = tr_tags[:100]
+    tr_masks = tr_masks[:100]
 
     # Balanced Sampling
     total_tags = np.zeros((21,))
@@ -68,7 +84,7 @@ def main():
     if opt.loadModel:
         print('Loading Model from {}'.format(opt.loadModel))
         m.load_state_dict(torch.load(opt.loadModel))
-        if not os.path.exists("../exp/{}/{}".format(opt.classType, opt.expID)):
+        if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
             try:
                 os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
             except FileNotFoundError:
@@ -107,9 +123,9 @@ def main():
     
     model.to(device)
     
-    print("Training beginning on: ", n_gpu)
     if n_gpu > 1:
         model = torch.nn.DataParallel(model)
+        logging.info("Training beginning on: %s" % n_gpu)
 
     # F1 score shouldn't consider no-propaganda
     # and other auxiliary labels
@@ -123,7 +139,7 @@ def main():
     tr_loss = 0
     max_grad_norm = 1.0
     best = 0
-    for _ in trange(opt.nEpochs, desc="Epoch"):
+    for i in trange(opt.nEpochs, desc="Epoch"):
         # TRAIN loop
         #scheduler.step()
         model.train()
@@ -150,8 +166,9 @@ def main():
             optimizer.step()
             optimizer.zero_grad()
             global_step += 1
+        logging.info(f'EPOCH {i} done: Train Loss {(tr_loss/nb_tr_steps)}')
+
         # print train loss per epoch
-        print("Train loss: {}".format(tr_loss/nb_tr_steps))
         # VALIDATION on validation set
         model.eval()
         eval_loss, eval_accuracy = 0, 0
@@ -179,21 +196,40 @@ def main():
             nb_eval_examples += b_input_ids.size(0)
             nb_eval_steps += 1
         eval_loss = eval_loss/nb_eval_steps
-        print("Validation loss: {}".format(eval_loss))    
-        print("Precision, Recall, F1-Score, Support: {}".format(f1(list(itertools.chain(*predictions)), list(itertools.chain(*val_tags)), average=None)))
+        logging.info("Validation loss: %s" % (eval_loss))    
+        logging.info("Precision, Recall, F1-Score, Support: {}".format(f1(list(itertools.chain(*predictions)), list(itertools.chain(*val_tags)), average=None)))
         f1_macro = f1_score(list(itertools.chain(*predictions)), list(itertools.chain(*val_tags)), labels=scorred_labels, average="macro")
-        print("F1 Macro ", f1_macro)
+        logging.info("F1 Macro Dev Set: %s" % f1_macro)
         #scheduler.step(f1_macro)
-        print(optimizer.get_lr()[0])
+        logging.info("Learning Rate: %s" % (optimizer.get_lr()[0]))
         
-        #TODO save checkpoints
-        #Save model based on best F1 score
-        if f1_macro > best:
+        # Save checkpoints
+        if i % opt.snapshot == 0:
+            if not os.path.exists("./exp/{}/{}/{}".format(opt.classType, opt.expID, i)):
+                try:
+                    os.mkdir("./exp/{}/{}/{}".format(opt.classType, opt.expID, i))
+                except FileNotFoundError:
+                    os.mkdir("./exp/{}/{}/{}".format(opt.classType, opt.expID, i))
+            torch.save(
+                model.state_dict(), './exp/{}/{}/{}/model_{}.pth'.format(opt.classType, opt.expID, i, i))
+            torch.save(
+                opt, './exp/{}/{}/{}/option.pth'.format(opt.classType, opt.expID, i))
+            torch.save(
+                optimizer, './exp/{}/{}/{}/optimizer.pth'.format(opt.classType, opt.expID, i))
+
+        
+        # Save model based on best F1 score and if epoch is greater than 3
+        if f1_macro > best and i > 3:
         # Save a trained model and the associated configuration
-        #TODO store configuration file
-            model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
-            output_model_file = os.path.join("./exp/{}/{}".format(opt.classType, opt.expID), "best_model.pth")
-            torch.save(model_to_save.state_dict(), output_model_file)
+            torch.save(
+                model.state_dict(), './exp/{}/{}/best_model.pth'.format(opt.classType, opt.expID))
+            torch.save(
+                opt, './exp/{}/{}/option.pth'.format(opt.classType, opt.expID))
+            torch.save(
+                optimizer, './exp/{}/{}/optimizer.pth'.format(opt.classType, opt.expID))
+            #model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
+            #output_model_file = os.path.join("./exp/{}/{}".format(opt.classType, opt.expID), "best_model.pth")
+            #torch.save(model_to_save.state_dict(), output_model_file)
             best = f1_macro
             logging.info("New best model")
 
