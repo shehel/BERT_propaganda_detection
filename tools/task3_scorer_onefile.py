@@ -20,7 +20,7 @@ TASK_3_ARTICLE_ID_COL=0
 TASK_3_TECHNIQUE_NAME_COL=1
 TASK_3_FRAGMENT_START_COL=2
 TASK_3_FRAGMENT_END_COL=3
-TECHNIQUE_NAMES_FILE=os.path.join("./","propaganda-techniques-names.txt")
+TECHNIQUE_NAMES_FILE=os.path.join("data","propaganda-techniques-names.txt")
 
 logger = logging.getLogger("propaganda_scorer")
 ch = logging.StreamHandler(sys.stdout)
@@ -149,6 +149,8 @@ def compute_score(submission_annotations, gold_annotations):
         r = cumulative_Spr/rec_denominator
     logger.info("Precision=%f/%d=%f\tRecall=%f/%d=%f"
                  %(cumulative_Spr, prec_denominator, p, cumulative_Spr, rec_denominator, r))
+    if prec_denominator == 0 and rec_denominator == 0:
+        f1 = 1.0
     if p>0 and r>0:
         f1 = 2*(p*r/(p+r))
     logger.info("F1=%f"%(f1))
@@ -157,12 +159,15 @@ def compute_score(submission_annotations, gold_annotations):
         prec_tech, rec_tech, f1_tech = (0,0,0)
         prec_tech_denominator = compute_technique_frequency(submission_annotations.values(), technique_name)
         rec_tech_denominator = compute_technique_frequency(gold_annotations.values(), technique_name)
-        if prec_tech_denominator > 0:
-            prec_tech = technique_Spr[technique_name] / prec_tech_denominator
-        if rec_tech_denominator > 0:
-            rec_tech = technique_Spr[technique_name] / rec_tech_denominator
-        if prec_tech>0 and rec_tech>0:
-            f1_tech = 2*(prec_tech*rec_tech/(prec_tech+rec_tech))
+        if prec_tech_denominator == 0 and rec_tech_denominator == 0: #
+            f1_tech = 1.0
+        else:
+            if prec_tech_denominator > 0:
+                prec_tech = technique_Spr[technique_name] / prec_tech_denominator
+            if rec_tech_denominator > 0:
+                rec_tech = technique_Spr[technique_name] / rec_tech_denominator
+            if prec_tech>0 and rec_tech>0:
+                f1_tech = 2*(prec_tech*rec_tech/(prec_tech+rec_tech))
         logger.info("F1-%s=%f"%(technique_name, f1_tech))
 
     return f1
