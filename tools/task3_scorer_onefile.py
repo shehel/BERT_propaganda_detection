@@ -1,4 +1,3 @@
-# -*- coding: UTF-8 -*-
 
 __author__ = "Giovanni Da San Martino"
 __copyright__ = "Copyright 2019"
@@ -6,7 +5,7 @@ __credits__ = ["Giovanni Da San Martino"]
 __license__ = "GPL"
 __version__ = "0.1"
 __maintainer__ = "Giovanni Da San Martino"
-__email__ = "gmartino@qf"
+__email__ = "gmartino@hbku.edu.qa"
 __status__ = "Beta"
 
 import sys
@@ -115,11 +114,11 @@ def compute_technique_frequency(annotations_list, technique_name):
                  for x in annotations_list ])
 
 
-def compute_score(submission_annotations, gold_annotations):
+def compute_score(submission_annotations, gold_annotations, technique_names):
 
     prec_denominator = sum([len(annotations) for annotations in submission_annotations.values()])
     rec_denominator = sum([len(annotations) for annotations in gold_annotations.values()])
-    technique_Spr = {propaganda_technique: 0 for propaganda_technique in load_technique_names_from_file()}
+    technique_Spr = {propaganda_technique: 0 for propaganda_technique in technique_names}
     cumulative_Spr = 0
     for article_id in submission_annotations.keys():
         gold_data = gold_annotations[article_id]
@@ -168,7 +167,7 @@ def compute_score(submission_annotations, gold_annotations):
                 rec_tech = technique_Spr[technique_name] / rec_tech_denominator
             if prec_tech>0 and rec_tech>0:
                 f1_tech = 2*(prec_tech*rec_tech/(prec_tech+rec_tech))
-        logger.info("F1-%s=%f"%(technique_name, f1_tech))
+        logger.info("%s: P=%f R=%f F1=%f"%(technique_name, prec_tech, rec_tech, f1_tech))
 
     return f1
 
@@ -210,7 +209,7 @@ def main(args):
     user_submission_file = args.submission
     gold_folder = args.gold
     output_log_file = args.log_file
-
+    
     if args.debug_on_std:
         ch.setLevel(logging.DEBUG)
 
@@ -222,7 +221,7 @@ def main(args):
         logger.addHandler(fileLogger)
 
     submission_annotations = load_annotation_list_from_file(user_submission_file)
-    techniques_names = load_technique_names_from_file()  # load technique names
+    techniques_names = load_technique_names_from_file(args.techniques_file)  # load technique names
     if gold_folder is None:
         # no gold file provided, perform only some checks on the submission files
         logger.info('Checking format of user submitted file %s' % (user_submission_file))
@@ -238,7 +237,7 @@ def main(args):
         for article_id in submission_annotations.keys():
             check_data_file_task3(submission_annotations[article_id], article_id, techniques_names)
         logger.info('Scoring user submitted file %s against gold file %s' % (user_submission_file, gold_folder))
-        return compute_score(submission_annotations, gold_annotations)
+        return compute_score(submission_annotations, gold_annotations, techniques_names)
         #compute_score({user_file: read_task3_output_file(user_file) for user_file in submission_annotations},
         #              {gold_folder: read_task3_output_file(gold_folder) for gold_folder in gold_annotations})
 
@@ -251,5 +250,7 @@ if __name__ == "__main__":
     parser.add_argument('-r', '--reference-folder', dest='gold', required=False, help="folder with the gold labels.")
     parser.add_argument('-d', '--enable-debug-on-standard-output', dest='debug_on_std', required=False,
                         action='store_true', help="Print debug info also on standard output.")
+    parser.add_argument('-t', '--propaganda-techniques-list-file', dest='techniques_file', required=False, default=TECHNIQUE_NAMES_FILE, 
+                        help="file with the list of propaganda techniques")
     parser.add_argument('-l', '--log-file', dest='log_file', required=False, help="Output logger file.")
     main(parser.parse_args())
