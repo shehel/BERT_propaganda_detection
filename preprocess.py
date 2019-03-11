@@ -235,7 +235,7 @@ def main(args):
     df = pd.DataFrame(df)
 
     ds = args.output
-    df.to_csv(ds, index=False, header=None)
+    df.to_csv(ds, index=False, header=None, sep='\t')
     
     logging.info("Dataset written to %s" % (ds))
 
