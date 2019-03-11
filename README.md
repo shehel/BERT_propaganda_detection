@@ -11,3 +11,10 @@ eg: python preprocess.py -d [path to articles and labels directory] -o [name of 
 5. Run the trainer, for example 
 python train.py --expID test_run --trainDataset dataset_train.csv --valDataset dataset_dev.csv --model bert-base-cased --LR 3e-5 --trainBatch 12 --nEpochs 5
 6. Run python predict.py to get output in the character level. Change parameters inside the file accordingly.
+
+
+Tested on:
+Python 3.6.8
+Pandas 0.24.1
+Spacy 2.0.18
+Torch 1.0
