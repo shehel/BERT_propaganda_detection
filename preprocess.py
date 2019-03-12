@@ -41,6 +41,7 @@ def parse_label(label_path, binary=None):
 
     return sorted(labels)
 
+
 # Includes additional labels for BIO Encoding
 PROPAGANDA_TYPES = [
     "O",
@@ -118,20 +119,20 @@ def bert_list(doc: Doc, doc_labels: list, ids):
     labels_idx = 0
     tokensh = []
     labelsh = []
-    # Stores the current sentence and appends to labelsh when current token is
-    # \n or \n\n 
     tlabel = []
     tspacyt = []
     ttoken=[]
     bertids = []
-    # Variable to store backtrack
     flagger = 0
     spacytokens = []
     current_token: Token = doc[0]
     while token_idx < len(doc):
         current_token: Token = doc[token_idx]
+        #if (str(current_token) == 'hope'):
+        #    ipdb.set_trace()
         current_label = safe_list_get(doc_labels, labels_idx)
-        if (str(current_token) == '\n' or str(current_token) == '\n\n'):
+        # advance token until it is within the label
+        if (str(current_token)[:1] == '\n'):
             flagger = 0
             if ttoken:
                 spacytokens.append(tspacyt)
@@ -153,16 +154,21 @@ def bert_list(doc: Doc, doc_labels: list, ids):
                 flagger = 0
             token_idx += 1
             continue
+        # mark all tokens in the span as B or I
         #ipdb.set_trace()
         start_token_idx = token_idx
         flagger = 0
         while current_token.idx < current_label[1]:
-            ttoken.append(str(current_token))
-            tspacyt.append(current_token)
-            #ipdb.set_trace()
-            #print("Marking ", current_token.lower_,'as', PT2ID[current_label[2]])
-            tlabel.append(PT2ID[current_label[2]])
-            #res[token_idx, PT2ID[current_label[2]]] = label
+            if (str(current_token)[:1] == '\n'):
+                pass
+            else: 
+                ttoken.append(str(current_token))
+                tspacyt.append(current_token)
+                #ipdb.set_trace()
+                #label = BEGIN #if current_token.i == start_token_idx else INSIDE
+                #print("Marking ", current_token.lower_,'as', PT2ID[current_label[2]])
+                tlabel.append(PT2ID[current_label[2]])
+                #res[token_idx, PT2ID[current_label[2]]] = label
             token_idx += 1
             if token_idx >= len(doc):
                 break
