@@ -114,7 +114,7 @@ def compute_technique_frequency(annotations_list, technique_name):
                  for x in annotations_list ])
 
 
-def compute_score(submission_annotations, gold_annotations, technique_names):
+def compute_score(submission_annotations, gold_annotations, technique_names, prop_vs_non_propaganda=False):
 
     prec_denominator = sum([len(annotations) for annotations in submission_annotations.values()])
     rec_denominator = sum([len(annotations) for annotations in gold_annotations.values()])
@@ -129,7 +129,7 @@ def compute_score(submission_annotations, gold_annotations, technique_names):
             sd_span = set(range(int(sd[1]), int(sd[2])))
             sd_annotation_length = int(sd[2]) - int(sd[1])
             for i, gd in enumerate(gold_data):
-                if gd[0]==sd[0]:
+                if prop_vs_non_propaganda or gd[0]==sd[0]:
                     #s += "\tmatch %s %s-%s - %s %s-%s"%(sd[0],sd[1], sd[2], gd[0], gd[1], gd[2])
                     gd_span = set(range(int(gd[1]), int(gd[2])))
                     intersection = len(sd_span.intersection(gd_span))
@@ -154,20 +154,21 @@ def compute_score(submission_annotations, gold_annotations, technique_names):
         f1 = 2*(p*r/(p+r))
     logger.info("F1=%f"%(f1))
 
-    for technique_name in technique_Spr.keys():
-        prec_tech, rec_tech, f1_tech = (0,0,0)
-        prec_tech_denominator = compute_technique_frequency(submission_annotations.values(), technique_name)
-        rec_tech_denominator = compute_technique_frequency(gold_annotations.values(), technique_name)
-        if prec_tech_denominator == 0 and rec_tech_denominator == 0: #
-            f1_tech = 1.0
-        else:
-            if prec_tech_denominator > 0:
-                prec_tech = technique_Spr[technique_name] / prec_tech_denominator
-            if rec_tech_denominator > 0:
-                rec_tech = technique_Spr[technique_name] / rec_tech_denominator
-            if prec_tech>0 and rec_tech>0:
-                f1_tech = 2*(prec_tech*rec_tech/(prec_tech+rec_tech))
-        logger.info("%s: P=%f R=%f F1=%f"%(technique_name, prec_tech, rec_tech, f1_tech))
+    if not prop_vs_non_propaganda:
+        for technique_name in technique_Spr.keys():
+            prec_tech, rec_tech, f1_tech = (0,0,0)
+            prec_tech_denominator = compute_technique_frequency(submission_annotations.values(), technique_name)
+            rec_tech_denominator = compute_technique_frequency(gold_annotations.values(), technique_name)
+            if prec_tech_denominator == 0 and rec_tech_denominator == 0: #
+                f1_tech = 1.0
+            else:
+                if prec_tech_denominator > 0:
+                    prec_tech = technique_Spr[technique_name] / prec_tech_denominator
+                if rec_tech_denominator > 0:
+                    rec_tech = technique_Spr[technique_name] / rec_tech_denominator
+                if prec_tech>0 and rec_tech>0:
+                    f1_tech = 2*(prec_tech*rec_tech/(prec_tech+rec_tech))
+            logger.info("%s: P=%f R=%f F1=%f"%(technique_name, prec_tech, rec_tech, f1_tech))
 
     return f1
 
@@ -209,7 +210,8 @@ def main(args):
     user_submission_file = args.submission
     gold_folder = args.gold
     output_log_file = args.log_file
-    
+    prop_vs_non_propaganda = bool(args.fragments_only)
+
     if args.debug_on_std:
         ch.setLevel(logging.DEBUG)
 
@@ -237,7 +239,7 @@ def main(args):
         for article_id in submission_annotations.keys():
             check_data_file_task3(submission_annotations[article_id], article_id, techniques_names)
         logger.info('Scoring user submitted file %s against gold file %s' % (user_submission_file, gold_folder))
-        return compute_score(submission_annotations, gold_annotations, techniques_names)
+        return compute_score(submission_annotations, gold_annotations, techniques_names, prop_vs_non_propaganda)
         #compute_score({user_file: read_task3_output_file(user_file) for user_file in submission_annotations},
         #              {gold_folder: read_task3_output_file(gold_folder) for gold_folder in gold_annotations})
 
@@ -253,4 +255,6 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--propaganda-techniques-list-file', dest='techniques_file', required=False, default=TECHNIQUE_NAMES_FILE, 
                         help="file with the list of propaganda techniques")
     parser.add_argument('-l', '--log-file', dest='log_file', required=False, help="Output logger file.")
+    parser.add_argument('-f', '--fragments-only', dest='fragments_only', required=False, action='store_true',
+                        help="If the option is added, two fragments match independently of their propaganda techniques")
     main(parser.parse_args())
