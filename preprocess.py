@@ -34,8 +34,11 @@ def parse_label(label_path, binary=None):
     for line in open(label_path):
         parts = line.strip().split('\t')
         if binary:
-            if parts[1] == binary:
-                labels.append((int(parts[2]), int(parts[3]), parts[1]))
+            if binary == 'Propaganda':
+                labels.append((int(parts[2]), int(parts[3]), 'Propaganda'))
+            else:
+                if (parts[1] == binary):
+                    labels.append((int(parts[2]), int(parts[3]), parts[1]))
         else:
             labels.append((int(parts[2]), int(parts[3]), parts[1]))
 
@@ -104,6 +107,19 @@ PROPAGANDA_TYPES_B = [
     "I-Thought-terminating_Cliches",
     "I-Whataboutism"
 ]
+def set_global_vars(label):
+    global PROPAGANDA_TYPES    # Needed to modify global copy of globvar
+    global PROPAGANDA_TYPES_B
+    PROPAGANDA_TYPES = [
+    "O", label
+    ]
+    PROPAGANDA_TYPES_B = [
+    "O",
+    "B-"+label,
+    "I-"+label,
+    ]
+    global PT2ID
+    PT2ID = {y: x for (x, y) in enumerate(PROPAGANDA_TYPES)}
 
 PT2ID = {y: x for (x, y) in enumerate(PROPAGANDA_TYPES)}
 
@@ -198,30 +214,11 @@ def bert_list(doc: Doc, doc_labels: list, ids, binary, bio=False):
         #token_idx = start_token_idx
     return bertids, tokensh, labelsh, spacytokens 
 
-# Converts labels into BIO format [Redundant]
-'''
-def bio_encoding(labels):
-    label_l = []
-    for oindex, x in enumerate(labels):
-        tlist = []
-        prev=labels[oindex][0]
-        for index, s in enumerate(x):
-            if (index==0 and labels[oindex][index]!=0):
-                tlist.append(labels[oindex][index]+18)
-                prev = labels[oindex][index]
-            if (prev!=labels[oindex][index] and labels[oindex][index]!= 0):
-                tlist.append(labels[oindex][index]+18)
-                prev = labels[oindex][index]
-            else:
-                tlist.append(labels[oindex][index])
-                prev = labels[oindex][index]
-        label_l.append(tlist)
-    return label_l
-    '''
-
 def main(args):
 
     directory = pathlib.Path(args.dataset)
+    if (args.binary):
+        set_global_vars(args.binary)
     ids, texts, labels = read_data(directory, binary=args.binary)
     logging.info("Data read")
     

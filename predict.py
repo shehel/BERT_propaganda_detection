@@ -1,5 +1,6 @@
 import logging
 from tokenize_text import *
+from preprocess import *
 
 import pickle 
 import numpy as np
@@ -89,7 +90,7 @@ def bert_list_test(doc, ids):
             current_token: Token = doc[token_idx]
             #if (str(current_token) == 'hope'):
             #    ipdb.set_trace()
-            if (str(current_token) == '\n' or str(current_token) == '\n\n'):
+            if (str(current_token)[:1] == '\n'):
                 if ttoken:
                     spacytokens.append(tspacyt)
                     tokensh.append(ttoken)
@@ -110,51 +111,29 @@ def bert_list_test(doc, ids):
             # revert token_idx because the labels might be intersecting
         return bertids, tokensh, spacytokens 
 
-PROPAGANDA_TYPES = [
-    "NULL",
-    "Appeal_to_Authority",
-    "Appeal_to_fear-prejudice",
-    "Bandwagon",
-    "Black-and-White_Fallacy",
-    "Causal_Oversimplification",
-    "Doubt",
-    "Exaggeration,Minimisation",
-    "Flag-Waving",
-    "Loaded_Language",
-    "Name_Calling,Labeling",
-    "Obfuscation,Intentional_Vagueness,Confusion",
-    "Red_Herring",
-    "Reductio_ad_hitlerum",
-    "Repetition",
-    "Slogans",
-    "Straw_Men",
-    "Thought-terminating_Cliches",
-    "Whataboutism",
-    "Hash",
-    "Padding",
-    "Appeal_to_Authority",
-    "Appeal_to_fear-prejudice",
-    "Bandwagon",
-    "Black-and-White_Fallacy",
-    "Causal_Oversimplification",
-    "Doubt",
-    "Exaggeration,Minimisation",
-    "Flag-Waving",
-    "Loaded_Language",
-    "Name_Calling,Labeling",
-    "Obfuscation,Intentional_Vagueness,Confusion",
-    "Red_Herring",
-    "Reductio_ad_hitlerum",
-    "Repetition",
-    "Slogans",
-    "Straw_Men",
-    "Thought-terminating_Cliches",
-    "Whataboutism"
-]
+def set_globals(label):
+    global PROPAGANDA_TYPES    # Needed to modify global copy of globvar
+    global PROPAGANDA_TYPES_B
+    PROPAGANDA_TYPES = [
+    "O", label
+    ]
+    PROPAGANDA_TYPES_B = [
+    "O",
+    "B-"+label,
+    "I-"+label,
+    ]
+    global hash_token
+    hash_token = 2
+    global end_token 
+    end_token = 3
+
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     n_gpu = torch.cuda.device_count(); 
     logging.info("GPUs Detected: %s" % (n_gpu))
+
+    if (opt.classType != "all_class"):
+        set_globals(opt.binaryLabel)
 
     tokenizer = BertTokenizer.from_pretrained(opt.model, do_lower_case=opt.lowerCase);
     # Model Initialize
@@ -164,27 +143,15 @@ def main():
     model.load_state_dict(torch.load(opt.loadModel))
     
     
-    #directory = pathlib.Path('./data/final/test/')
-    #ids, texts, _ = read_data(directory, isLabels=False)
+    directory = pathlib.Path(opt.valDataset)
+    ids, texts, _ = read_data(directory, isLabels=False)
     
-    ds = pickle.load( open( "dataset_test.p", "rb" ) )
-
-    texts = ds["Text"]
-    ids = ds["ID"]
-
-    
-
     bertid, bertt, spacy = zip(*[bert_list_test(d, idx) for d, idx in zip(texts, ids)])
 
-    flat_list = [item for sublist in bertt for item in sublist]
-    flat_list_i = [item for sublist in bertid for item in sublist]
-    df = {"ID":flat_list_i, "Tokens":flat_list}
-    df = pd.DataFrame(df)
-
-    flat_list_s = [item for sublist in spacy for item in sublist]
-
-    ids = list(df["ID"])
-    terms = list(df["Tokens"])
+    terms = [item for sublist in bertt for item in sublist]
+    ids = [item for sublist in bertid for item in sublist]
+    
+    spacy_sentence = [item for sublist in spacy for item in sublist]
 
     cleaned = [[tokenizer.tokenize(words) for words in sent] for sent in terms]
 
@@ -212,10 +179,7 @@ def main():
                         attention_mask=b_input_mask)
         logits = logits.detach().cpu().numpy()
         predictions_sample.extend([list(p) for p in np.argmax(logits, axis=2)])
-
-    
-
-    end_token = 20
+   
 
     pred = []
     for x in predictions_sample:
@@ -232,8 +196,8 @@ def main():
     listid = []
 
     for i, x in enumerate(pred):
-        a = flat_list_s[i]
-        b = flat_list_i[i]
+        a = spacy_sentence[i]
+        b = ids[i]
         id_text, spans = get_spans(a, x, i, b)
         if spans:
             for span in spans:
@@ -242,7 +206,7 @@ def main():
                 lists.append(span[1])
                 listp.append(span[0])
 
-    df = {"ID": listid, "P": listp, "s": liste, "liste": lists}
+    df = {"ID": listid, "P": listp, "s": lists, "liste": liste}
 
     df = pd.DataFrame(df)
 
