@@ -48,12 +48,12 @@ def main():
     logging.info("Labels detected in train dataset: %s" % (np.unique(tr_tags)))
     logging.info("Labels detected in val dataset: %s" % (np.unique(val_tags)))
 
-    tr_inputs = tr_inputs[:100]
-    tr_tags = tr_tags[:100]
-    tr_masks = tr_masks[:100]
+    #tr_inputs = tr_inputs[:100]
+    #tr_tags = tr_tags[:100]
+    #tr_masks = tr_masks[:100]
 
     # Balanced Sampling
-    total_tags = np.zeros((21,))
+    total_tags = np.zeros((opt.nLabels,))
     for x in tr_tags:
         total_tags = total_tags+np.bincount(x)
     

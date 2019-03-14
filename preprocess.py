@@ -18,7 +18,7 @@ def read_data(directory, isLabels = True, binary=None):
     for f in directory.glob('*.txt'):
         id = f.name.replace('article', '').replace('.txt','')
         ids.append(id)
-        texts.append(f.read_text())
+        texts.append(f.read_text(encoding='utf-8'))
         if isLabels:
             labels.append(parse_label(f.as_posix().replace('.txt', '.task3.labels'), binary=binary))
     docs = list(nlp.pipe(texts))

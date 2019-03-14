@@ -4,8 +4,8 @@ from opt import opt
 import numpy as np
 from keras.preprocessing.sequence import pad_sequences
 
-hash_token = 19
-end_token = 20
+hash_token = 2
+end_token = 3
 
 
 def reg_encoding(cleaned, labels):
@@ -16,8 +16,10 @@ def reg_encoding(cleaned, labels):
             for s in j:
                 if s[0]=='#':
                     tlist.append(hash_token)
+                elif labels[oindex][index] == 0:
+                    tlist.append(0)
                 else:
-                    tlist.append(labels[oindex][index])
+                    tlist.append(1)
                 #else:
                  #   tlist.append(labels[oindex][index])
         label_l.append(tlist)
@@ -54,12 +56,12 @@ def concatenate_list_data(cleaned):
     return result
 
 def make_set(data_dir, tokenizer):
-    dataset = pd.read_csv(data_dir, sep=',', header=None, converters={1:ast.literal_eval, 2:ast.literal_eval})
+    dataset = pd.read_csv(data_dir, sep='\t', header=None, converters={1:ast.literal_eval, 2:ast.literal_eval})
     # Shuffle samples
     dataset = dataset.sample(frac=1)
     
-    terms = list(dataset[1])
-    labels = list(dataset[2])
+    terms = list(dataset[2])
+    labels = list(dataset[1])
     
     cleaned = [[tokenizer.tokenize(words) for words in sent] for sent in terms]
     tokenized_texts = [concatenate_list_data(sent) for sent in cleaned]
