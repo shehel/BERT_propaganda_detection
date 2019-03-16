@@ -26,15 +26,18 @@ def make_logger():
             except FileNotFoundError:
                 os.mkdir("./exp/{}".format(opt.classType))
                 os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
-            
+    
     logging.basicConfig(
-        filename= ("./exp/{}/{}/log.txt".format(opt.classType, opt.expID)),
-        filemode='a',
-        level=logging.INFO,
-        format='%(asctime)s, %(message)s')
+    filename= ("./exp/{}/{}/log.txt".format(opt.classType, opt.expID)),
+    filemode='a',
+    level=logging.INFO,
+    format='%(asctime)s, %(message)s')
+
+    logging.getLogger().addHandler(logging.StreamHandler())
 
 def main():
     make_logger()
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     n_gpu = torch.cuda.device_count(); 
     logging.info("GPUs Detected: %s" % (n_gpu))
