@@ -16,10 +16,14 @@ eg: <br>
 ```python predict.py --valDataset datasets-v5/tasks-2-3/dev/ --model bert-base-cased --validBatch 12 --loadModel exp/binary/binary_2E/1/model_1.pth --outputFile pred.csv --classType binary --nLabels 4```
 
 ## Tested on:
-Python 3.6.8 <br>
+huggingface/pytorch-pretrained-BERT 0.4 <br>
 Pandas 0.24.1 <br>
 Spacy 2.0.18 <br>
 Torch 1.0 <br>
+Tensorflow 1.12 <br>
+<br>
+Python 3.6.8 <br>
+CUDA 9
 
 # Evaluation 
 1. ```cd tools```

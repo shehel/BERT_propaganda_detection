@@ -1,5 +1,5 @@
 torch
-pytorch-pretrained-bert
+pytorch-pretrained-bert==0.4
 spacy
 scikit-learn
 keras
