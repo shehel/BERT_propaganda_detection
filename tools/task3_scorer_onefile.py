@@ -30,6 +30,10 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(ch)
 
 
+#class Propaganda_Techinques_Detection_Scorer(Object):
+#    def __init__(self, submission_file, gold_folder, ):
+
+
 def check_data_file_lists(submission_annotations, gold_annotations, task_name="task3"):
 
     #checking that the number of articles for which the user has submitted annotations is correct
@@ -68,26 +72,152 @@ def extract_article_id_from_file_name(fullpathfilename):
     return regex.match(os.path.basename(fullpathfilename)).group(1)
 
 
-def check_data_file_task3(submission_article_annotations, article_id, techniques_names):
+def print_annotations(annotation_list):
+    s = ""
+    i=0
+    for technique, span in annotation_list:
+        s += "%d) %s: %d - %d\n"%(i, technique, min(span), max(span))
+        i += 1
+    return s
+
+def merge_spans(annotations_without_overlapping, i):
+    """
+
+    :param spans: a list of spans of article annotations
+    :param i: the index in spans which needs to be tested for ovelapping
+    :param annotations: a list of annotations of an article
+    :return:
+    """
+    #print("checking element %d of %d"%(i, len(spans)))
+    for j in range(0, len(annotations_without_overlapping)):
+        assert i<len(annotations_without_overlapping) or print(i, len(annotations_without_overlapping))
+        if j != i and len(annotations_without_overlapping[i][1].intersection(annotations_without_overlapping[j][1])) > 0:
+            # print("Found overlapping spans: %d-%d and %d-%d in annotations %d,%d:\n%s"
+            #       %(min(annotations_without_overlapping[i][1]), max(annotations_without_overlapping[i][1]),
+            #         min(annotations_without_overlapping[j][1]), max(annotations_without_overlapping[j][1]), i,j,
+            #         print_annotations(annotations_without_overlapping)))
+            annotations_without_overlapping[j][1] = annotations_without_overlapping[j][1].union(annotations_without_overlapping[i][1])
+            del(annotations_without_overlapping[i])
+            # print("Annotations after deletion:\n%s"%(print_annotations(annotations_without_overlapping)))
+            if j > i:
+                j -= 1
+            # print("calling recursively")
+            merge_spans(annotations_without_overlapping, j)
+            # print("done")
+            return True
+
+    return False
+
+
+def check_annotation_spans(annotations, merge_overlapping_spans=False):
+
+    for article_id in annotations.keys():  # for each article
+        #print(article_id)
+        spans = []
+        annotations_without_overlapping = []
+        for annotation in annotations[article_id]:
+            if merge_overlapping_spans:
+                #spans.append(annotation[1])
+                annotations_without_overlapping.append([annotation[0], annotation[1]])
+                #if merge_spans(spans, len(spans)-1, annotations[article_id]):
+                merge_spans(annotations_without_overlapping, len(annotations_without_overlapping) - 1)
+                #if merge_spans(annotations_without_overlapping, len(annotations_without_overlapping) - 1):
+                #    print("Done with merging:\n" + print_annotations(annotations_without_overlapping))
+            else:
+                for span in spans:
+                    if len(span.intersection(annotation[1])) > 0:
+                        logger.error("In article %s, the span [%s,%s] overlap with the following one from the same "
+                                     "article: [%s,%s]" % (article_id, min(annotation[1]), max(annotation[1]),
+                                                           min(span), max(span)))
+                        return False
+                spans.append(annotation[1])
+        if merge_overlapping_spans:
+            annotations[article_id] = annotations_without_overlapping
+    return True
+
+
+# def category_matching_func_hard(annotation_1, annotation_2):
+#
+#     if annotation_1==annotation_2:
+#         return 1.0
+#     else:
+#         return 0.0
+#
+#
+# def category_matching_func_all(annotation_1, annotation_2):
+#
+#     return 1.0
+
+
+def check_annotation_spans_with_category_matching(annotations, merge_overlapping_spans=False):
+    """
+    Check whether there are ovelapping spans for the same technique in the same article.
+    Two spans are overlapping if their associated techniques match (according to category_matching_func)
+    If merge_overlapping_spans==True then the overlapping spans are merged, otherwise an error is raised.
+
+    :param annotations: a dictionary with the full set of annotations for all articles
+    :param merge_overlapping_spans: if True merges the overlapping spans
+    :return:
+    """
+
+    for article_id in annotations.keys():  # for each article
+
+        annotation_list = {}
+        for technique, curr_span in annotations[article_id]:
+            if technique not in annotation_list.keys():
+                annotation_list[technique] = [ [technique, curr_span] ]
+            else:
+                if merge_overlapping_spans:
+                    annotation_list[technique].append([technique, curr_span])
+                    merge_spans(annotation_list[technique], len(annotation_list[technique]) - 1)
+                else:
+                    for matching_technique, span in annotation_list[technique]:
+                        if len(curr_span.intersection(span)) > 0:
+                            logger.error("In article %s, the span of the annotation %s, [%s,%s] overlap with "
+                                         "the following one from the same article:%s, [%s,%s]" % (article_id, matching_technique,
+                                                                min(span), max(span), technique, min(curr_span), max(curr_span)))
+                            return False
+                    annotation_list[technique].append([technique, curr_span])
+        if merge_overlapping_spans:
+            annotations[article_id] = []
+            for technique in annotation_list.keys():
+                annotations[article_id] += annotation_list[technique]
+    return True
+
+
+def check_format_of_annotation_in_file(row, i, techniques_names, filename):
+    """
+
+    :param row: a list of fields describing the annotation elements (technique name, start_span, end_span)
+    :param i:
+    :return:
+    """
+
+    if len(row) != 4:
+        logger.error("Row %d in file %s is supposed to have 4 TAB-separated columns. Found %d."
+                     % (i + 1, filename, len(row)))
+        sys.exit()
+    # checking the technique names are correct
+    if row[TASK_3_TECHNIQUE_NAME_COL] not in techniques_names:
+        logger.error("On row %d in file %s the technique name, %s, is incorrect. Possible values are: %s"
+                     % (i + 1, filename, row[TASK_3_TECHNIQUE_NAME_COL], str(techniques_names)))
+        sys.exit()
+    # checking spans
+    if int(row[TASK_3_FRAGMENT_START_COL]) < 0 or int(row[TASK_3_FRAGMENT_END_COL]) < 0:
+        logger.error("On row %d in file %s, start and end of position of the fragment must be non-negative. "
+                     "Found values %s, %s" % (i + 1, filename, row[TASK_3_FRAGMENT_START_COL], row[TASK_3_FRAGMENT_END_COL]))
+        sys.exit()
+    if int(row[TASK_3_FRAGMENT_START_COL]) >= int(row[TASK_3_FRAGMENT_END_COL]):
+        logger.error("On row %d end position of the fragment must be greater than the starting "
+                     "one. Found values %s, %s" % (i + 1, filename, row[TASK_3_FRAGMENT_START_COL], row[TASK_3_FRAGMENT_END_COL]))
+        sys.exit()
+
+
+def check_article_annotations_format(submission_article_annotations, article_id, techniques_names):
 
     annotations = {}
     for i, row in enumerate(submission_article_annotations):
-        if len(row) != 3:
-            logger.error("Row %d in file %s is supposed to have 3 TAB-separated columns. Found %d."
-                             % (i + 1, submission_article_annotations, len(row))); sys.exit()
-        #checking the technique names are correct
-        if row[0] not in techniques_names:
-            logger.error("On row %d in file %s the technique name, %s, is incorrect. Possible values are: %s"
-                             % (i + 1, submission_article_annotations, row[0], str(techniques_names))); sys.exit()
-        #checking spans
-        if int(row[1]) < 0 or int(row[2]) < 0:
-            logger.error("On row %d in file %s, start and end of position of the fragment must be non-negative. "
-                         "Found values %s, %s"
-                             % (i + 1, submission_article_annotations, row[1], row[2])); sys.exit()
-        if int(row[1]) >= int(row[2]):
-            logger.error("On row %d in file %s, end position of the fragment must be greater than the starting "
-                         "one. Found values %s, %s"%(i + 1, submission_article_annotations,
-                                                     row[1], row[2])); sys.exit()
+        check_annotation_format_from_file(row, i)
         #checking that there are no overlapping spans flagged with the same technique name
         if row[0] not in annotations.keys():
             annotations[row[0]] = []
@@ -126,18 +256,16 @@ def compute_score(submission_annotations, gold_annotations, technique_names, pro
                      % (article_id, str(submission_annotations[article_id]), str(gold_data)))
         for j, sd in enumerate(submission_annotations[article_id]): #submission_data:
             s=""
-            sd_span = set(range(int(sd[1]), int(sd[2])))
-            sd_annotation_length = int(sd[2]) - int(sd[1])
+            sd_annotation_length = len(sd[1])
             for i, gd in enumerate(gold_data):
                 if prop_vs_non_propaganda or gd[0]==sd[0]:
                     #s += "\tmatch %s %s-%s - %s %s-%s"%(sd[0],sd[1], sd[2], gd[0], gd[1], gd[2])
-                    gd_span = set(range(int(gd[1]), int(gd[2])))
-                    intersection = len(sd_span.intersection(gd_span))
-                    gd_annotation_length = int(gd[2]) - int(gd[1])
+                    intersection = len(sd[1].intersection(gd[1]))
+                    gd_annotation_length = len(gd[1])
                     Spr = intersection/max(sd_annotation_length, gd_annotation_length)
                     cumulative_Spr += Spr
                     s += "\tmatch %s %s-%s - %s %s-%s: S(p,r)=|intersect(r, p)|/max(|p|,|r|) = %d/max(%d,%d) = %f (cumulative S(p,r)=%f)\n"\
-                         %(sd[0],sd[1], sd[2], gd[0], gd[1], gd[2], intersection, sd_annotation_length, gd_annotation_length, Spr, cumulative_Spr)
+                         %(sd[0],min(sd[1]), max(sd[1]), gd[0], min(gd[1]), max(gd[1]), intersection, sd_annotation_length, gd_annotation_length, Spr, cumulative_Spr)
                     technique_Spr[gd[0]] += Spr
             logger.debug("\n%s"%(s))
 
@@ -173,7 +301,7 @@ def compute_score(submission_annotations, gold_annotations, technique_names, pro
     return f1
 
 
-def load_annotation_list_from_folder(folder_name):
+def load_annotation_list_from_folder(folder_name, techniques_names):
 
     file_list = glob.glob(os.path.join(folder_name, "*.task3.labels"))
     if len(file_list)==0:
@@ -183,25 +311,33 @@ def load_annotation_list_from_folder(folder_name):
     for filename in file_list:
         annotations[extract_article_id_from_file_name(filename)] = []
         with open(filename, "r") as f:
-            for line in f.readlines():
+            for row_number, line in enumerate(f.readlines()):
                 row = line.rstrip().split("\t")
-                annotations[row[TASK_3_ARTICLE_ID_COL]].append([ row[TASK_3_TECHNIQUE_NAME_COL],
-                                                                 row[TASK_3_FRAGMENT_START_COL],
-                                                                 row[TASK_3_FRAGMENT_END_COL] ])
+                check_format_of_annotation_in_file(row, row_number, techniques_names, filename)
+                # annotations[row[TASK_3_ARTICLE_ID_COL]].append([ row[TASK_3_TECHNIQUE_NAME_COL],
+                #                                                  row[TASK_3_FRAGMENT_START_COL],
+                #                                                  row[TASK_3_FRAGMENT_END_COL] ])
+                annotations[row[TASK_3_ARTICLE_ID_COL]].append([row[TASK_3_TECHNIQUE_NAME_COL],
+                                                                set(range(int(row[TASK_3_FRAGMENT_START_COL]),
+                                                                          int(row[TASK_3_FRAGMENT_END_COL])))])
     return annotations
 
 
-def load_annotation_list_from_file(filename):
+def load_annotation_list_from_file(filename, techniques_names):
 
     annotations = {}
     with open(filename, "r") as f:
-        for line in f.readlines():
+        for row_number, line in enumerate(f.readlines()):
             row = line.rstrip().split("\t")
+            check_format_of_annotation_in_file(row, row_number, techniques_names, filename)
             if row[TASK_3_ARTICLE_ID_COL] not in annotations.keys():
                 annotations[row[TASK_3_ARTICLE_ID_COL]] = []
+            # annotations[row[TASK_3_ARTICLE_ID_COL]].append([ row[TASK_3_TECHNIQUE_NAME_COL],
+            #                                                  row[TASK_3_FRAGMENT_START_COL],
+            #                                                  row[TASK_3_FRAGMENT_END_COL]])
             annotations[row[TASK_3_ARTICLE_ID_COL]].append([ row[TASK_3_TECHNIQUE_NAME_COL],
-                                                             row[TASK_3_FRAGMENT_START_COL],
-                                                             row[TASK_3_FRAGMENT_END_COL]])
+                                                             set(range(int(row[TASK_3_FRAGMENT_START_COL]),
+                                                                       int(row[TASK_3_FRAGMENT_END_COL]))) ])
     return annotations
 
 
@@ -222,26 +358,32 @@ def main(args):
         fileLogger.setFormatter(formatter)
         logger.addHandler(fileLogger)
 
-    submission_annotations = load_annotation_list_from_file(user_submission_file)
     techniques_names = load_technique_names_from_file(args.techniques_file)  # load technique names
+    submission_annotations = load_annotation_list_from_file(user_submission_file, techniques_names)
     if gold_folder is None:
         # no gold file provided, perform only some checks on the submission files
         logger.info('Checking format of user submitted file %s' % (user_submission_file))
-        for article_id in submission_annotations.keys():
-            check_data_file_task3(submission_annotations[article_id], article_id, techniques_names)
+        for article_id, annotations in submission_annotations.items():
+            check_article_annotations_format(annotations, article_id, techniques_names)
         logger.warning("The format of the submitted file is ok. However, more checks, requiring the gold file, are needed "
                         "for the submission to be correct: the number of article and their ids must correspond to the "
                         "ones of the gold file, etc")
     else:
         logger.info('Checking user submitted file %s against gold folder %s' % (user_submission_file, gold_folder))
-        gold_annotations = load_annotation_list_from_folder(gold_folder)
+        gold_annotations = load_annotation_list_from_folder(gold_folder, techniques_names)
         check_data_file_lists(submission_annotations, gold_annotations)
-        for article_id in submission_annotations.keys():
-            check_data_file_task3(submission_annotations[article_id], article_id, techniques_names)
+        if prop_vs_non_propaganda:
+            if not check_annotation_spans(submission_annotations):
+                logger.info("Error in file %s" %(user_submission_file))
+                sys.exit()
+            check_annotation_spans(gold_annotations, True)
+        else:
+            if not check_annotation_spans_with_category_matching(submission_annotations):
+                logger.info("Error in file %s" % (user_submission_file))
+                sys.exit()
+            check_annotation_spans_with_category_matching(gold_annotations, True)
         logger.info('Scoring user submitted file %s against gold file %s' % (user_submission_file, gold_folder))
         return compute_score(submission_annotations, gold_annotations, techniques_names, prop_vs_non_propaganda)
-        #compute_score({user_file: read_task3_output_file(user_file) for user_file in submission_annotations},
-        #              {gold_folder: read_task3_output_file(gold_folder) for gold_folder in gold_annotations})
 
 
 if __name__ == "__main__":
@@ -255,6 +397,6 @@ if __name__ == "__main__":
     parser.add_argument('-t', '--propaganda-techniques-list-file', dest='techniques_file', required=False, default=TECHNIQUE_NAMES_FILE, 
                         help="file with the list of propaganda techniques")
     parser.add_argument('-l', '--log-file', dest='log_file', required=False, help="Output logger file.")
-    parser.add_argument('-f', '--fragments-only', dest='fragments_only', required=False, action='store_true',
+    parser.add_argument('-f', '--fragments-only', dest='fragments_only', required=False, action='store_true', default=False,
                         help="If the option is added, two fragments match independently of their propaganda techniques")
     main(parser.parse_args())

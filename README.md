@@ -26,6 +26,14 @@ Python 3.6.8 <br>
 CUDA 9
 
 # Evaluation 
+
+Default Task: identification of fragments and techniques
 1. ```cd tools```
 2. Assuming the predictions are in file dev.labels and the gold labels in the folder task3-gold-labels/dev-task3-labels, the following command evaluates the predictions on the development set 
 ```python task3_scorer_onefile.py -s dev.labels -r task3-gold-labels/dev-task3-labels -t propaganda-techniques-names.txt```
+
+Fragment identification only task (two fragments are considered to match no matter what their associated technique is)
+1. ```cd tools```
+2. Assuming the predictions are in file dev.labels and the gold labels in the folder task3-gold-labels/dev-task3-labels, the following command evaluates the predictions on the development set 
+```python task3_scorer_onefile.py -s dev.labels -r task3-gold-labels/dev-task3-labels -t propaganda-techniques-names.txt -f```
+Notice that if the file with predictions has overlapping spans, an error is raised and no scoring is computed 
