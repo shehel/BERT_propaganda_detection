@@ -7,11 +7,15 @@ from keras.preprocessing.sequence import pad_sequences
 hash_token = 19
 end_token = 20
 
-def set_global_label():
+def set_global_label(bio=False):
     global hash_token
-    hash_token = 2
     global end_token 
-    end_token = 3
+    if bio:
+        hash_token = 3
+        end_token = 4
+    else:
+        hash_token = 2
+        end_token = 3
 
 def reg_encoding(cleaned, labels):
     label_l = []
@@ -27,6 +31,8 @@ def reg_encoding(cleaned, labels):
     return label_l
 
 def bio_encoding(cleaned, labels):
+    offset = 1
+    
     label_l = []
     for oindex, x in enumerate(cleaned):
         tlist = []
@@ -39,10 +45,10 @@ def bio_encoding(cleaned, labels):
                     tlist.append(hash_token)
                 else:
                     if (index==0 and labels[oindex][index]!=0):
-                        tlist.append(labels[oindex][index]+20)
+                        tlist.append(labels[oindex][index]+offset)
                         prev = labels[oindex][index]
                     if (prev!=labels[oindex][index] and labels[oindex][index]!= 0):
-                        tlist.append(labels[oindex][index]+20)
+                        tlist.append(labels[oindex][index]+offset)
                         prev = labels[oindex][index]
                     else:
                         tlist.append(labels[oindex][index])
@@ -56,20 +62,24 @@ def concatenate_list_data(cleaned):
         result += element
     return result
 
-def make_set(data_dir, tokenizer, class_type):
+def make_set(data_dir, tokenizer, class_type, bio = False):
     dataset = pd.read_csv(data_dir, sep='\t', header=None, converters={1:ast.literal_eval, 2:ast.literal_eval})
     # Shuffle samples
     #dataset = dataset.sample(frac=1)
     if class_type != 'all_class':
-        set_global_label()
+        set_global_label(bio)
     terms = list(dataset[1])
     labels = list(dataset[2])
     
     cleaned = [[tokenizer.tokenize(words) for words in sent] for sent in terms]
     tokenized_texts = [concatenate_list_data(sent) for sent in cleaned]
 
-    label_l = reg_encoding(cleaned, labels)
-    
+    if bio:
+        label_l = bio_encoding(cleaned, labels)
+    else:
+        label_l = reg_encoding(cleaned, labels)
+
+
     input_ids = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
                           maxlen=opt.maxLen, dtype="long", truncating="post", padding="post")
     

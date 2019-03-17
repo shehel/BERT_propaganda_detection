@@ -18,6 +18,8 @@ parser.add_argument('--binaryLabel', default="Loaded_Language", type=str,
                     help='One of the 18 classes')
 parser.add_argument('--outputFile', default="pred_local.csv", type=str,
                     help='Directory and name of the file to store predictions.')
+parser.add_argument('--bio', default=False, type=bool,
+                    help='Activate bio encoding')
 "----------------------------- Model options -----------------------------"
 parser.add_argument('--model', default="bert-large-cased", type=str,
                     help='Select a model to be trained: bert-base-cased|bert-base-uncased|bert-large-uncased|bert-large-cased')
