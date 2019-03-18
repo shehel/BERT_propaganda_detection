@@ -208,7 +208,7 @@ def check_format_of_annotation_in_file(row, i, techniques_names, filename):
                      "Found values %s, %s" % (i + 1, filename, row[TASK_3_FRAGMENT_START_COL], row[TASK_3_FRAGMENT_END_COL]))
         sys.exit()
     if int(row[TASK_3_FRAGMENT_START_COL]) >= int(row[TASK_3_FRAGMENT_END_COL]):
-        logger.error("On row %d end position of the fragment must be greater than the starting "
+        logger.error("On row %d in file %s, end position of the fragment must be greater than the starting "
                      "one. Found values %s, %s" % (i + 1, filename, row[TASK_3_FRAGMENT_START_COL], row[TASK_3_FRAGMENT_END_COL]))
         sys.exit()
 
