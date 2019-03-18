@@ -45,8 +45,8 @@ def main():
     tokenizer = BertTokenizer.from_pretrained(opt.model, do_lower_case=opt.lowerCase);
 
     # Load Tokenized train and validation datasets
-    trn_tokenized_texts, trn_label_l, tr_inputs, tr_tags, tr_masks = make_set(opt.trainDataset, tokenizer, opt.classType)
-    val_tokenized_texts, val_label_l, val_inputs, val_tags, val_masks = make_set(opt.valDataset, tokenizer, opt.classType)
+    trn_tokenized_texts, trn_label_l, tr_inputs, tr_tags, tr_masks = make_set(opt.trainDataset, tokenizer, opt.classType, opt.bio)
+    val_tokenized_texts, val_label_l, val_inputs, val_tags, val_masks = make_set(opt.valDataset, tokenizer, opt.classType, opt.bio)
     logging.info("Dataset loaded")
     logging.info("Labels detected in train dataset: %s" % (np.unique(tr_tags)))
     logging.info("Labels detected in val dataset: %s" % (np.unique(val_tags)))
