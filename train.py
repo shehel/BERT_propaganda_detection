@@ -18,7 +18,7 @@ from tqdm import tqdm, trange
 import os 
 from opt import opt
 import itertools
-
+import os
 def make_logger():
     if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
             try:
@@ -36,8 +36,9 @@ def make_logger():
     logging.getLogger().addHandler(logging.StreamHandler())
 
 def main():
+    os.environ['CUDA_VISIBLE_DEVICES']='0,1,2,3,4'
     make_logger()
-    
+    logging.info("Training for class %s" % (opt.binaryLabel))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     n_gpu = torch.cuda.device_count(); 
     logging.info("GPUs Detected: %s" % (n_gpu))
