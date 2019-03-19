@@ -23,20 +23,20 @@ import itertools
 
 logging.basicConfig(level=logging.INFO)
 
-def get_spans(a, labelx, i, id_text):
-        #if i==35:
-        #ipdb.set_trace()
-        spans = []
-        span_len = 0
-        prev = 0
-        for i, x in enumerate(labelx):
-            if i >= len(a)-1:
-                break
-            if x == 19:
-                continue
-            if x == 20:
-                continue
+def get_spans(a, labelx, i, id_text, hash_token=3, end_token=4):
+    #if i==35:
+    #ipdb.set_trace()
+    spans = []
+    span_len = 0
+    prev = 0
+    for i, x in enumerate(labelx):
+        # End if last index\
+        
+        if x == end_token:
+            continue
+        if i >= len(a)-1:
             if x != 0:
+                # if prev element isn't equal to current and not O
                 if prev != x and prev !=0:
                     span_e= a[i-1].idx + len(a[i-1])
                     span_len = 0
@@ -54,13 +54,11 @@ def get_spans(a, labelx, i, id_text):
                         spans.append([PROPAGANDA_TYPES[labelx[i]], span_f, span_e])
                         continue
                 else:
-                    if (i >= len(labelx)-1):
-                        span_e= a[i].idx + len(a[i])
-                        span_len = 0
-                        spans.append([PROPAGANDA_TYPES[labelx[i]], span_f, span_e])
-                        continue
-                    span_len = span_len+1
-
+                    span_e= a[i].idx + len(a[i])
+                    span_len = 0
+                    spans.append([PROPAGANDA_TYPES[labelx[i]], span_f, span_e])
+                    continue
+                    
             else:
                 prev = x
                 if (span_len != 0):
@@ -68,15 +66,50 @@ def get_spans(a, labelx, i, id_text):
                     span_len = 0
                     spans.append([PROPAGANDA_TYPES[labelx[i-1]], span_f, span_e])
                     continue
+        if x == hash_token:
+            continue
+        if x != 0:
+            # Check if prev element was same as current or equal to O
+            if prev != x and prev !=0:
+                span_e= a[i-1].idx + len(a[i-1])
+                span_len = 0
+                spans.append([PROPAGANDA_TYPES[labelx[i-1]], span_f, span_e])
+                prev = x
+                span_f = a[i].idx
+                span_len = span_len+1
+            if span_len == 0:
+                span_f = a[i].idx
+                span_len = span_len+1
+                prev=x
                 if (i >= len(labelx)-1):
-                    #span_e= a[i].idx + len(a[i])
-                    #span_len = 0
-                    #spans.append([span_f, span_e])
+                    span_e= a[i].idx + len(a[i])
+                    span_len = 0
+                    spans.append([PROPAGANDA_TYPES[labelx[i]], span_f, span_e])
                     continue
-        if spans:
-            return id_text, spans
+            else:
+                if (i >= len(labelx)-1):
+                    span_e= a[i].idx + len(a[i])
+                    span_len = 0
+                    spans.append([PROPAGANDA_TYPES[labelx[i]], span_f, span_e])
+                    continue
+                span_len = span_len+1
+
         else:
-            return (0, [])
+            prev = x
+            if (span_len != 0):
+                span_e= a[i-1].idx+len(a[i-1])
+                span_len = 0
+                spans.append([PROPAGANDA_TYPES[labelx[i-1]], span_f, span_e])
+                continue
+            if (i >= len(labelx)-1):
+                #span_e= a[i].idx + len(a[i])
+                #span_len = 0
+                #spans.append([span_f, span_e])
+                continue
+    if spans:
+        return id_text, spans
+    else:
+        return (0, [])
 
 def bert_list_test(doc, ids):
         token_idx = 0
@@ -115,17 +148,18 @@ def set_globals(label):
     global PROPAGANDA_TYPES    # Needed to modify global copy of globvar
     global PROPAGANDA_TYPES_B
     PROPAGANDA_TYPES = [
-    "O", label
-    ]
+    "O",
+    "B-"+label,
+    "I-"+label,    ]
     PROPAGANDA_TYPES_B = [
     "O",
     "B-"+label,
     "I-"+label,
     ]
     global hash_token
-    hash_token = 2
+    hash_token = 3
     global end_token 
-    end_token = 3
+    end_token = 4
 
 def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -180,9 +214,22 @@ def main():
         logits = logits.detach().cpu().numpy()
         predictions_sample.extend([list(p) for p in np.argmax(logits, axis=2)])
    
-
     pred = []
-    for x in predictions_sample:
+    for oindex, x in enumerate(cleaned):
+        index = 0
+        tlist = []
+        for iindex, j in enumerate(x):
+            #print (j)
+            #print(index)
+            tlist.append(predictions_sample[oindex][index])
+            length = len(j)
+            index = index + length
+            #print ("Token: ", j, "-----  Assigned: ", predictions_sample[oindex][index])
+        pred.append(tlist)
+        
+    tpred = pred
+    pred = []
+    for x in tpred:
         tlist = []
         for j in x:
             if j in [hash_token, end_token]:
@@ -204,7 +251,7 @@ def main():
                 listid.append(id_text)
                 liste.append(span[2])
                 lists.append(span[1])
-                listp.append(span[0])
+                listp.append("Loaded_Language")
 
     df = {"ID": listid, "P": listp, "s": lists, "liste": liste}
 
