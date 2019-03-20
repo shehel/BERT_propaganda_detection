@@ -20,7 +20,6 @@ huggingface/pytorch-pretrained-BERT 0.4 <br>
 Pandas 0.24.1 <br>
 Spacy 2.0.18 <br>
 Torch 1.0 <br>
-Tensorflow 1.12 <br>
 <br>
 Python 3.6.8 <br>
 CUDA 9
