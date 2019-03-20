@@ -10,7 +10,7 @@ eg: <br>
 <br>-s and -b are additional flags used to get binary label dataset and bio formatted dataset respectively. 
 4. Create folder ```./exp``` - This is where the logs and model states will be stored for training runs. 
 5. Run the trainer, for example <br>
-```python train.py --expID test_run --trainDataset dataset_train.csv --valDataset dataset_dev.csv --model bert-base-cased --LR 3e-5 --trainBatch 12 --nEpochs 5 --classType binary --nlabels 4```
+```python train.py --expID test_run --trainDataset dataset_train.csv --valDataset dataset_dev.csv --model bert-base-cased --LR 3e-5 --trainBatch 12 --nEpochs 5 --classType binary --nLabels 4```
 
 6. Run python predict.py to get output in the character level. For example: <br>
 ```python predict.py --valDataset datasets-v5/tasks-2-3/dev/ --model bert-base-cased --validBatch 12 --loadModel exp/binary/binary_2E/1/model_1.pth --outputFile pred.csv --classType binary --nLabels 4```
