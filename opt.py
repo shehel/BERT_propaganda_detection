@@ -8,6 +8,8 @@ parser.add_argument('--expID', default='default', type=str,
                     help='Experiment ID')
 parser.add_argument('--trainDataset', default='', type=str,
                     help='CSV file containing the training dataset')
+parser.add_argument('--testDataset', default='', type=str,
+                    help='Directory containing test articles')                    
 parser.add_argument('--valDataset', default='', type=str,
                     help='CSV file containing the validation dataset')               
 parser.add_argument('--snapshot', default=1, type=int,
@@ -21,7 +23,7 @@ parser.add_argument('--outputFile', default="pred_local.csv", type=str,
 parser.add_argument('--bio', default=False, type=bool,
                     help='Activate bio encoding')
 "----------------------------- Model options -----------------------------"
-parser.add_argument('--model', default="bert-large-cased", type=str,
+parser.add_argument('--model', default="bert-base-cased", type=str,
                     help='Select a model to be trained: bert-base-cased|bert-base-uncased|bert-large-uncased|bert-large-cased')
 parser.add_argument('--lowerCase', default=False, type=bool,
                     help='Set to true if using a uncased model')
