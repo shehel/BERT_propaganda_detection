@@ -145,37 +145,37 @@ def bert_list_test(doc: Doc, ids):
 
 def main():
     os.environ['CUDA_VISIBLE_DEVICES']='0,1,2,3,4'
-    MAX_LEN = 210
-    bs = 32
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     n_gpu = torch.cuda.device_count(); 
     logging.info("GPUs Detected: %s" % (n_gpu))
 
-    tokenizer = BertTokenizer.from_pretrained('bert-base-cased', do_lower_case=False);
+    tokenizer = BertTokenizer.from_pretrained(opt.model, do_lower_case=opt.lowerCase);
     # Model Initialize
-    model = BertForTokenClassification.from_pretrained('bert-base-cased', num_labels=4);
+    model = BertForTokenClassification.from_pretrained(opt.model, num_labels=opt.nLabels);
 
     model.to(device)
     if n_gpu > 1:
         model = torch.nn.DataParallel(model)
     model.load_state_dict(torch.load(opt.loadModel))
-    directory = pathlib.Path('datasets-v5/tasks-2-3/dev/')
+    directory = pathlib.Path(opt.testDataset)
     ids, texts, _ = read_data(directory, isLabels=False)
-    
-    global PROPAGANDA_TYPES    # Needed to modify global copy of globvar
-    global PROPAGANDA_TYPES_B
+    logging.info("Files loaded from directory: %s" % (len(texts)))
+    if opt.classType != "all_class":
+        logging.info("Setting global vars")
+        global PROPAGANDA_TYPES    # Needed to modify global copy of globvar
+        global PROPAGANDA_TYPES_B
 
-    global hash_token
-    global end_token 
+        global hash_token
+        global end_token 
 
-    PROPAGANDA_TYPES = [
-        "O",
-        opt.binaryLabel,
-    ]
-
-
-    hash_token=2
-    end_token=3
+        PROPAGANDA_TYPES = [
+            "O",
+            opt.binaryLabel,
+        ]
+        
+        hash_token=2
+        end_token=3
 
 
 
@@ -183,45 +183,38 @@ def main():
 
     flat_list = [item for sublist in bertt for item in sublist]
     flat_list_i = [item for sublist in bertid for item in sublist]
-    df = {"ID":flat_list_i, "Tokens":flat_list}
-    df = pd.DataFrame(df)
-
     flat_list_s = [item for sublist in spacy for item in sublist]
 
-    ids = list(df["ID"])
-    terms = list(df["Tokens"])
-
-    cleaned = [[tokenizer.tokenize(words) for words in sent] for sent in terms]
-
+    cleaned = [[tokenizer.tokenize(words) for words in sent] for sent in flat_list]
     tokenized_texts = [concatenate_list_data(sent) for sent in cleaned]
 
-   #numerics = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
-    #                          maxlen=MAX_LEN, dtype="long", truncating="post", padding="post")
     numerics = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
-                              max_len=MAX_LEN)
-
+                              max_len=opt.maxLen)
     attention_masks = [[float(i>0) for i in ii] for ii in numerics]
-
+    
     t_inputs = torch.tensor(numerics)
     t_masks = torch.tensor(attention_masks)
 
     t_data = TensorDataset(t_inputs, t_masks)
-    t_dataloader = DataLoader(t_data, sampler=None, batch_size=bs)
-
+    t_dataloader = DataLoader(t_data, sampler=None, batch_size=opt.validBatch)
 
     model.eval()
     predictions_sample = []
 
-    for batch in t_dataloader:
-        #ipdb.set_trace()
+    for batch in tqdm(t_dataloader, desc="Predicting"):
         batch = tuple(t.to(device) for t in batch)
         b_input_ids, b_input_mask= batch
         logits = model(b_input_ids, token_type_ids=None,
                            attention_mask=b_input_mask)
         logits = logits.detach().cpu().numpy()
         predictions_sample.extend([list(p) for p in np.argmax(logits, axis=2)])
-
-    
+    counter = 0
+    for x in predictions_sample:
+        for j in x:
+            if j == 1:
+                counter = counter + 1
+                break
+    print (counter)
     pred = []
     for oindex, x in enumerate(cleaned):
         index = 0
@@ -235,20 +228,22 @@ def main():
             #print ("Token: ", j, "-----  Assigned: ", predictions_sample[oindex][index])
         pred.append(tlist)
 
-    stopp=pred
-
-
-
+    tpred = pred
     pred = []
-    for x in stopp:
+    for x in tpred:
         tlist = []
         for j in x:
             if j in [hash_token, end_token]:
                 continue
             tlist.append(j)
         pred.append(tlist)
-    
-    print (PROPAGANDA_TYPES)
+    counter = 0
+    for x in predictions_sample:
+        for j in x:
+            if j == 1:
+                counter = counter + 1
+                break
+    print ("Counter check: ", counter)
     lists = []
     liste = []
     listp = []
@@ -268,7 +263,7 @@ def main():
     df = {"ID": listid, "P": listp, "s": lists, "liste": liste}
 
     df = pd.DataFrame(df)
-
-    df.to_csv('pred.csv', sep='\t', index=False, header=False) 
+    df.to_csv(opt.outputFile, sep='\t', index=False, header=False) 
+    logging.info("Predictions written to: %s" % (opt.outputFile))
 if __name__ == '__main__':
     main()
