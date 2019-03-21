@@ -195,8 +195,10 @@ def main():
 
     tokenized_texts = [concatenate_list_data(sent) for sent in cleaned]
 
+   #numerics = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
+    #                          maxlen=MAX_LEN, dtype="long", truncating="post", padding="post")
     numerics = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
-                              maxlen=MAX_LEN, dtype="long", truncating="post", padding="post")
+                              max_len=MAX_LEN)
 
     attention_masks = [[float(i>0) for i in ii] for ii in numerics]
 
