@@ -13,7 +13,7 @@ from sklearn.model_selection import train_test_split
 from torch.optim import Adam
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, WeightedRandomSampler, TensorDataset
-                            
+from early_stopping import EarlyStopping                            
 from tqdm import tqdm, trange
 import os 
 from opt import opt
@@ -76,6 +76,7 @@ def main():
     ## Create Dataloaders
     train_data = TensorDataset(tr_inputs, tr_masks, tr_tags)
     train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
+    #train_sampler = SequentialSampler(train_data)
     train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=opt.trainBatch)
 
     valid_data = TensorDataset(val_inputs, val_masks, val_tags)
@@ -143,6 +144,7 @@ def main():
     tr_loss = 0
     max_grad_norm = 1.0
     best = 0
+    early_stopping = EarlyStopping(patience=7, verbose=True)
     for i in trange(opt.nEpochs, desc="Epoch"):
         # TRAIN loop
         #scheduler.step()
@@ -207,6 +209,13 @@ def main():
         #scheduler.step(f1_macro)
         logging.info("Learning Rate: %s" % (optimizer.get_lr()[0]))
         
+        # early_stopping needs the validation loss to check if it has decresed, 
+        # and if it has, it will make a checkpoint of the current model
+        early_stopping(eval_loss, model)
+        
+        if early_stopping.early_stop:
+            print("Early stopping")
+            break
         # Save checkpoints
         if i % opt.snapshot == 0:
             if not os.path.exists("./exp/{}/{}/{}".format(opt.classType, opt.expID, i)):
@@ -223,7 +232,7 @@ def main():
 
         
         # Save model based on best F1 score and if epoch is greater than 3
-        if f1_macro > best and i > 3:
+        '''if f1_macro > best and i > 3:
         # Save a trained model and the associated configuration
             torch.save(
                 model.state_dict(), './exp/{}/{}/best_model.pth'.format(opt.classType, opt.expID))
@@ -236,7 +245,7 @@ def main():
             #torch.save(model_to_save.state_dict(), output_model_file)
             best = f1_macro
             logging.info("New best model")
-
+        '''
     logging.info("Training Finished")
 
 if __name__ == '__main__':
