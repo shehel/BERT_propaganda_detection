@@ -214,7 +214,7 @@ def main():
         early_stopping(eval_loss, model)
         
         if early_stopping.early_stop:
-            print("Early stopping")
+            logging.info("Early stopping")
             break
         # Save checkpoints
         if i % opt.snapshot == 0:
