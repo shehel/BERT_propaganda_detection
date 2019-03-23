@@ -9,7 +9,6 @@ import spacy
 from pathlib import Path
 from spacy.tokens import Doc, Token
 nlp = spacy.load('en')
-from opt import opt
 
 def read_data(directory, isLabels = True, binary=None):
     ids = []

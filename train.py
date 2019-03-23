@@ -144,7 +144,7 @@ def main():
     tr_loss = 0
     max_grad_norm = 1.0
     best = 0
-    early_stopping = EarlyStopping(patience=7, verbose=True)
+    early_stopping = EarlyStopping(patience=3, verbose=True)
     for i in trange(opt.nEpochs, desc="Epoch"):
         # TRAIN loop
         #scheduler.step()
