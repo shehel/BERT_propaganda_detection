@@ -13,10 +13,11 @@ eg: <br>
 ```python train.py --expID test_run --trainDataset dataset_train.csv --valDataset dataset_dev.csv --model bert-base-cased --LR 3e-5 --trainBatch 12 --nEpochs 5 --classType binary --nLabels 4```
 
 6. Run python predict.py to get output in the character level. For example: <br>
-```python predict.py --valDataset datasets-v5/tasks-2-3/dev/ --model bert-base-cased --validBatch 12 --loadModel exp/binary/binary_2E/1/model_1.pth --outputFile pred.csv --classType binary --nLabels 4```
+```python predict.py --testDataset datasets-v5/tasks-2-3/dev/ --model bert-base-cased --validBatch 12 --loadModel exp/binary/binary_2E/1/model_1.pth --outputFile pred.csv --classType binary --nLabels 4 --binaryLabel Loaded_Language```
+(Loaded Language is placeholder in the binary case)
 
 ## Tested on:
-huggingface/pytorch-pretrained-BERT 0.4 <br>
+huggingface/pytorch-pretrained-BERT **0.4 **<br>
 Pandas 0.24.1 <br>
 Spacy 2.0.18 <br>
 Torch 1.0 <br>
