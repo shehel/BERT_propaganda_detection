@@ -11,7 +11,6 @@ from sklearn.metrics import f1_score
 from sklearn.metrics import precision_recall_fscore_support as f1
 from sklearn.model_selection import train_test_split
 from torch.optim import Adam
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.data import DataLoader, RandomSampler, SequentialSampler, WeightedRandomSampler, TensorDataset
 from early_stopping import EarlyStopping                            
 from tqdm import tqdm, trange
@@ -46,8 +45,8 @@ def main():
     tokenizer = BertTokenizer.from_pretrained(opt.model, do_lower_case=opt.lowerCase);
 
     # Load Tokenized train and validation datasets
-    trn_tokenized_texts, trn_label_l, tr_inputs, tr_tags, tr_masks = make_set(opt.trainDataset, tokenizer, opt.classType, opt.bio)
-    val_tokenized_texts, val_label_l, val_inputs, val_tags, val_masks = make_set(opt.valDataset, tokenizer, opt.classType, opt.bio)
+    trn_tokenized_texts, trn_label_l, tr_inputs, tr_tags, tr_masks, hash_token, end_token = make_set(opt.trainDataset, tokenizer, opt.classType, opt.bio)
+    val_tokenized_texts, val_label_l, val_inputs, val_tags, val_masks, hash_token, end_token = make_set(opt.valDataset, tokenizer, opt.classType, opt.bio)
     logging.info("Dataset loaded")
     logging.info("Labels detected in train dataset: %s" % (np.unique(tr_tags)))
     logging.info("Labels detected in val dataset: %s" % (np.unique(val_tags)))
@@ -55,7 +54,6 @@ def main():
     #tr_inputs = tr_inputs[:100]
     #tr_tags = tr_tags[:100]
     #tr_masks = tr_masks[:100]
-
     # Balanced Sampling
     total_tags = np.zeros((opt.nLabels,))
     for x in tr_tags:
@@ -64,6 +62,13 @@ def main():
     probs = 1./total_tags
     train_tokenweights = probs[tr_tags]
     weightage = np.sum(train_tokenweights, axis=1)
+    ws = np.ones((opt.nLabels,))
+    ws[0] = 0
+    
+    ws[hash_token] = 0
+    ws[end_token] = 0
+    prob = [max(x) for x in ws[tr_tags]]
+    weightage = [x + y for x, y in zip(prob, (len(prob)*[0.1]))]    
     
     ## Convert to pyTorch tensors
     tr_inputs = torch.tensor(tr_inputs)
@@ -72,11 +77,12 @@ def main():
     val_tags = torch.tensor(val_tags)
     tr_masks = torch.tensor(tr_masks)
     val_masks = torch.tensor(val_masks)
-
+    
+    
     ## Create Dataloaders
     train_data = TensorDataset(tr_inputs, tr_masks, tr_tags)
     train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
-    #train_sampler = SequentialSampler(train_data)
+    train_sampler = SequentialSampler(train_data)
     train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=opt.trainBatch)
 
     valid_data = TensorDataset(val_inputs, val_masks, val_tags)
@@ -144,7 +150,10 @@ def main():
     tr_loss = 0
     max_grad_norm = 1.0
     best = 0
-    early_stopping = EarlyStopping(patience=3, verbose=True)
+    early_stopping = EarlyStopping(patience=15, verbose=True)
+    trainlosses = []
+    validlosses = []
+    f1scores = []
     for i in trange(opt.nEpochs, desc="Epoch"):
         # TRAIN loop
         #scheduler.step()
@@ -173,7 +182,7 @@ def main():
             optimizer.zero_grad()
             global_step += 1
         logging.info(f'EPOCH {i} done: Train Loss {(tr_loss/nb_tr_steps)}')
-
+        trainlosses.append(tr_loss/nb_tr_steps)
         # print train loss per epoch
         # VALIDATION on validation set
         model.eval()
@@ -208,10 +217,11 @@ def main():
         logging.info("F1 Macro Dev Set: %s" % f1_macro)
         #scheduler.step(f1_macro)
         logging.info("Learning Rate: %s" % (optimizer.get_lr()[0]))
-        
+        validlosses.append(eval_loss)
+        f1scores.append(f1_macro) 
         # early_stopping needs the validation loss to check if it has decresed, 
         # and if it has, it will make a checkpoint of the current model
-        early_stopping(eval_loss, model)
+        early_stopping(f1_macro*(-1), model)
         
         if early_stopping.early_stop:
             logging.info("Early stopping")
@@ -247,6 +257,11 @@ def main():
             logging.info("New best model")
         '''
     logging.info("Training Finished")
-
+    df = pd.DataFrame({'col':trainlosses})
+    df.to_csv("trainlosses.csv", sep='\t', index=False, header=False) 
+    df = pd.DataFrame({'col':validlosses})
+    df.to_csv("validlosses.csv", sep='\t', index=False, header=False) 
+    df = pd.DataFrame({'col':f1scores})
+    df.to_csv("f1scores.csv", sep='\t', index=False, header=False) 
 if __name__ == '__main__':
     main()
