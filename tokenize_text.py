@@ -95,7 +95,6 @@ def make_set(data_dir, tokenizer, class_type, bio = False):
     
     cleaned = [[tokenizer.tokenize(words) for words in sent] for sent in terms]
     tokenized_texts = [concatenate_list_data(sent) for sent in cleaned]
-
     if bio:
         label_l = bio_encoding(cleaned, labels)
     else:
@@ -113,6 +112,6 @@ def make_set(data_dir, tokenizer, class_type, bio = False):
     attention_masks = [[float(i>0) for i in ii] for ii in input_ids]
     
     
-    return label_l, tokenized_texts, input_ids, tags, attention_masks
+    return label_l, tokenized_texts, input_ids, tags, attention_masks, hash_token, end_token
 
 
