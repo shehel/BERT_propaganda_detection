@@ -230,7 +230,7 @@ def check_article_annotations_format(submission_article_annotations, article_id,
                                  % (i + 1, article_id, row[0], row[1], row[2], span[0], span[1]));
                     sys.exit()
         annotations[row[0]].append([row[1], row[2]])
-    logger.debug("OK: article %s format is correct" % (article_id))
+    #logger.debug("OK: article %s format is correct" % (article_id))
 
 
 def read_task3_output_file(filename):
@@ -252,8 +252,8 @@ def compute_score(submission_annotations, gold_annotations, technique_names, pro
     cumulative_Spr = 0
     for article_id in submission_annotations.keys():
         gold_data = gold_annotations[article_id]
-        logger.debug("Computing contribution to the score of article id %s\nand tuples %s\n%s\n"
-                     % (article_id, str(submission_annotations[article_id]), str(gold_data)))
+        #logger.debug("Computing contribution to the score of article id %s\nand tuples %s\n%s\n"
+                    # % (article_id, str(submission_annotations[article_id]), str(gold_data)))
         for j, sd in enumerate(submission_annotations[article_id]): #submission_data:
             s=""
             sd_annotation_length = len(sd[1])
@@ -267,7 +267,7 @@ def compute_score(submission_annotations, gold_annotations, technique_names, pro
                     s += "\tmatch %s %s-%s - %s %s-%s: S(p,r)=|intersect(r, p)|/max(|p|,|r|) = %d/max(%d,%d) = %f (cumulative S(p,r)=%f)\n"\
                          %(sd[0],min(sd[1]), max(sd[1]), gd[0], min(gd[1]), max(gd[1]), intersection, sd_annotation_length, gd_annotation_length, Spr, cumulative_Spr)
                     technique_Spr[gd[0]] += Spr
-            logger.debug("\n%s"%(s))
+            #logger.debug("\n%s"%(s))
 
     p,r,f1=(0,0,0)
     if prec_denominator>0:

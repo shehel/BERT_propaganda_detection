@@ -260,19 +260,20 @@ def main():
     df = {"ID": listid, "P": listp, "s": lists, "liste": liste}
 
     df = pd.DataFrame(df)
-    out_dir = opt.loadModel.rsplit('/', 1)[0] + "/pred.csv"
+    postfix = opt.testDataset.rsplit('/', 2)[-2]
+    out_dir = opt.loadModel.rsplit('/', 1)[0] + "/pred." + postfix
     df.to_csv(out_dir, sep='\t', index=False, header=False) 
     logging.info("Predictions written to: %s" % (out_dir))
-    if opt.classType != "binary":
-        char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", "./tools/data/propaganda-techniques-names.txt"])
-    else:
-        char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", "./tools/data/propaganda-techniques-names.txt", "-f"])
 
-    out_dir = opt.loadModel.rsplit('/', 1)[0] + "/scores.csv"
-    text_file = open(out_dir, "w")
-    text_file.write(char_predict)
-    text_file.close()
-    logging.info(char_predict)
+    out_file = opt.loadModel.rsplit('/', 1)[0] + "/score." + postfix
+    if opt.classType != "binary":
+        char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", "./tools/data/propaganda-techniques-names.txt", "-l", out_file])
+    else:
+        char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", "./tools/data/propaganda-techniques-names.txt", "-f", "-l", out_file])
+
+    #text_file = open(out_dir, "w")
+    #text_file.write(str(char_predict))
+    #text_file.close()
     logging.info("Scores written to: %s" % (out_dir))
 
 if __name__ == '__main__':
