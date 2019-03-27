@@ -37,7 +37,8 @@ parser.add_argument('--maxLen', default=210, type=float,
 "----------------------------- Hyperparameter options -----------------------------"
 parser.add_argument('--LR', default=1e-3, type=float,
                     help='Learning rate')
-
+parser.add_argument('--patience', default=7, type=float,
+                    help='Patience count for early stopping')
 parser.add_argument('--momentum', default=0, type=float,
                     help='Momentum')
 parser.add_argument('--weightDecay', default=0, type=float,

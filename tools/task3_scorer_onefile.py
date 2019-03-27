@@ -340,9 +340,24 @@ def load_annotation_list_from_file(filename, techniques_names):
                                                                        int(row[TASK_3_FRAGMENT_END_COL]))) ])
     return annotations
 
+def parse_args(raw_args = None):
+    parser = argparse.ArgumentParser("Scorer for 2019 Hackathon task 3. If only -s option is provided, only some checks on the "
+                                     "submitted file is performed.")
+    parser.add_argument('-s', '--submission-file', dest='submission', required=True, help="file with the submission of the team")
+    parser.add_argument('-r', '--reference-folder', dest='gold', required=False, help="folder with the gold labels.")
+    parser.add_argument('-d', '--enable-debug-on-standard-output', dest='debug_on_std', required=False,
+                        action='store_true', help="Print debug info also on standard output.")
+    parser.add_argument('-t', '--propaganda-techniques-list-file', dest='techniques_file', required=False, default=TECHNIQUE_NAMES_FILE, 
+                        help="file with the list of propaganda techniques")
+    parser.add_argument('-l', '--log-file', dest='log_file', required=False, help="Output logger file.")
+    parser.add_argument('-f', '--fragments-only', dest='fragments_only', required=False, action='store_true', default=False,
+                        help="If the option is added, two fragments match independently of their propaganda techniques")
+    args = parser.parse_args(raw_args)
+    print(vars(args))
+    return parser.parse_args(raw_args)
 
-def main(args):
-
+def main(raw_args = None):
+    args = parse_args(raw_args)
     user_submission_file = args.submission
     gold_folder = args.gold
     output_log_file = args.log_file
@@ -387,16 +402,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-
-    parser = argparse.ArgumentParser("Scorer for 2019 Hackathon task 3. If only -s option is provided, only some checks on the "
-                                     "submitted file is performed.")
-    parser.add_argument('-s', '--submission-file', dest='submission', required=True, help="file with the submission of the team")
-    parser.add_argument('-r', '--reference-folder', dest='gold', required=False, help="folder with the gold labels.")
-    parser.add_argument('-d', '--enable-debug-on-standard-output', dest='debug_on_std', required=False,
-                        action='store_true', help="Print debug info also on standard output.")
-    parser.add_argument('-t', '--propaganda-techniques-list-file', dest='techniques_file', required=False, default=TECHNIQUE_NAMES_FILE, 
-                        help="file with the list of propaganda techniques")
-    parser.add_argument('-l', '--log-file', dest='log_file', required=False, help="Output logger file.")
-    parser.add_argument('-f', '--fragments-only', dest='fragments_only', required=False, action='store_true', default=False,
-                        help="If the option is added, two fragments match independently of their propaganda techniques")
-    main(parser.parse_args())
+    main()

@@ -1,16 +1,13 @@
 import logging
 from tokenize_text import *
 from preprocess import *
+import tools.task3_scorer_onefile
 
-import pickle 
 import numpy as np
 import pandas as pd
 import torch
 from pytorch_pretrained_bert import (BasicTokenizer, BertConfig,
                                      BertForTokenClassification, BertTokenizer)
-from sklearn.metrics import f1_score
-from sklearn.metrics import precision_recall_fscore_support as f1
-from sklearn.model_selection import train_test_split
 from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler, WeightedRandomSampler,
 TensorDataset)
 from tqdm import tqdm, trange
@@ -263,7 +260,20 @@ def main():
     df = {"ID": listid, "P": listp, "s": lists, "liste": liste}
 
     df = pd.DataFrame(df)
-    df.to_csv(opt.outputFile, sep='\t', index=False, header=False) 
-    logging.info("Predictions written to: %s" % (opt.outputFile))
+    out_dir = opt.loadModel.rsplit('/', 1)[0] + "/pred.csv"
+    df.to_csv(out_dir, sep='\t', index=False, header=False) 
+    logging.info("Predictions written to: %s" % (out_dir))
+    if opt.classType != "binary":
+        char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", "./tools/data/propaganda-techniques-names.txt"])
+    else:
+        char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", "./tools/data/propaganda-techniques-names.txt", "-f"])
+
+    out_dir = opt.loadModel.rsplit('/', 1)[0] + "/scores.csv"
+    text_file = open(out_dir, "w")
+    text_file.write(char_predict)
+    text_file.close()
+    logging.info(char_predict)
+    logging.info("Scores written to: %s" % (out_dir))
+
 if __name__ == '__main__':
     main()

@@ -81,7 +81,7 @@ def main():
     
     ## Create Dataloaders
     train_data = TensorDataset(tr_inputs, tr_masks, tr_tags)
-    train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
+    #train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
     train_sampler = SequentialSampler(train_data)
     train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=opt.trainBatch)
 
@@ -150,7 +150,7 @@ def main():
     tr_loss = 0
     max_grad_norm = 1.0
     best = 0
-    early_stopping = EarlyStopping(patience=15, verbose=True)
+    early_stopping = EarlyStopping(patience=opt.patience, verbose=True)
     trainlosses = []
     validlosses = []
     f1scores = []
