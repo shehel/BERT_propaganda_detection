@@ -7,7 +7,7 @@ import torch
 hash_token = 19
 end_token = 20
 
-def pad_sequences(sequences: list[str], batch_first: bool = True, padding_value: int = 0, max_len: int = 0) -> torch.tensor:
+def pad_sequences(sequences: list, batch_first: bool = True, padding_value: int = 0, max_len: int = 0): 
     tmp = torch.Tensor(sequences[0])
     max_size = tmp.size()
     trailing_dims = max_size[1:]
@@ -51,7 +51,7 @@ def reg_encoding(cleaned: list, labels: list) -> list:
         label_l.append(tlist)
     return label_l
 
-def bio_encoding(cleaned: list[str], labels: list[int]) -> list[int]:
+def bio_encoding(cleaned, labels: list) -> list:
     offset = 1
     
     label_l = []
@@ -77,7 +77,7 @@ def bio_encoding(cleaned: list[str], labels: list[int]) -> list[int]:
         label_l.append(tlist)
     return label_l
 
-def concatenate_list_data(cleaned: list) -> list[str]:
+def concatenate_list_data(cleaned: list): 
     result= []
     for element in cleaned:
         result += element

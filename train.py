@@ -96,6 +96,11 @@ def main():
 
     # Model Initialize
     model = BertForTokenClassification.from_pretrained(opt.model, num_labels=opt.nLabels);
+    model.to(device)
+    
+    if n_gpu > 1:
+        model = torch.nn.DataParallel(model)
+        logging.info("Training beginning on: %s" % n_gpu)
     if opt.loadModel:
         print('Loading Model from {}'.format(opt.loadModel))
         model.load_state_dict(torch.load(opt.loadModel))
@@ -136,11 +141,7 @@ def main():
                          warmup=warmup_proportion,
                          t_total=num_train_optimization_steps) 
     
-    model.to(device)
     
-    if n_gpu > 1:
-        model = torch.nn.DataParallel(model)
-        logging.info("Training beginning on: %s" % n_gpu)
 
     # F1 score shouldn't consider no-propaganda
     # and other auxiliary labels
