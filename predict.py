@@ -47,15 +47,14 @@ def main():
 
     logging.info("Files loaded from directory: %s" % (len(texts)))
 
-    flat_list, flat_list_i, flat_list_s = test2list(ids, texts)
-
+    flat_list_i, flat_list, flat_list_s = test2list(ids, texts)
     cleaned = [[tokenizer.tokenize(words) for words in sent] for sent in flat_list]
     tokenized_texts = [concatenate_list_data(sent) for sent in cleaned]
-
+    print(tokenized_texts[:50])
     numerics = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
                               max_len=opt.maxLen)
     attention_masks = [[float(i>0) for i in ii] for ii in numerics]
-    
+    print (numerics[:5], attention_masks[:5])
     t_inputs = torch.tensor(numerics)
     t_masks = torch.tensor(attention_masks)
 
@@ -73,7 +72,6 @@ def main():
         logits = logits.detach().cpu().numpy()
         predictions_sample.extend([list(p) for p in np.argmax(logits, axis=2)])
 
-    print (prop_tech_e)
     df = get_char_level(flat_list_i, flat_list_s, predictions_sample, cleaned, hash_token, end_token, prop_tech)
     postfix = opt.testDataset.rsplit('/', 2)[-2]
     out_dir = opt.loadModel.rsplit('/', 1)[0] + "/pred." + postfix

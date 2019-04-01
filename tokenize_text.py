@@ -2,13 +2,12 @@ import pandas as pd
 import ast
 from opt import opt
 import numpy as np
-#from keras.preprocessing.sequence import pad_sequences
 import torch
 
 hash_token = 19
 end_token = 20
 
-def pad_sequences(sequences, batch_first=True, padding_value=0.0, max_len=0):
+def pad_sequences(sequences: list[str], batch_first: bool = True, padding_value: int = 0, max_len: int = 0) -> torch.tensor:
     tmp = torch.Tensor(sequences[0])
     max_size = tmp.size()
     trailing_dims = max_size[1:]
@@ -29,7 +28,7 @@ def pad_sequences(sequences, batch_first=True, padding_value=0.0, max_len=0):
 
     return out_tensor.long().numpy()
 
-def set_global_label(bio=False):
+def set_global_label(bio: bool = False) -> None:
     global hash_token
     global end_token 
     if bio:
@@ -39,7 +38,7 @@ def set_global_label(bio=False):
         hash_token = 2
         end_token = 3
 
-def reg_encoding(cleaned, labels):
+def reg_encoding(cleaned: list, labels: list) -> list:
     label_l = []
     for oindex, x in enumerate(cleaned):
         tlist = []
@@ -52,7 +51,7 @@ def reg_encoding(cleaned, labels):
         label_l.append(tlist)
     return label_l
 
-def bio_encoding(cleaned, labels):
+def bio_encoding(cleaned: list[str], labels: list[int]) -> list[int]:
     offset = 1
     
     label_l = []
@@ -78,13 +77,13 @@ def bio_encoding(cleaned, labels):
         label_l.append(tlist)
     return label_l
 
-def concatenate_list_data(cleaned):
+def concatenate_list_data(cleaned: list) -> list[str]:
     result= []
     for element in cleaned:
         result += element
     return result
 
-def make_set(data_dir, tokenizer, class_type, bio = False):
+def make_set(data_dir: str, tokenizer, class_type: str, bio: bool = False) -> list: 
     dataset = pd.read_csv(data_dir, sep='\t', header=None, converters={1:ast.literal_eval, 2:ast.literal_eval})
     # Shuffle samples
     #dataset = dataset.sample(frac=1)
@@ -102,16 +101,11 @@ def make_set(data_dir, tokenizer, class_type, bio = False):
 
     input_ids = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
                           padding_value=0.0, max_len=opt.maxLen)
-    #input_ids = pad_sequences([tokenizer.convert_tokens_to_ids(txt) for txt in tokenized_texts],
-    #                      maxlen=opt.maxLen, dtype="long", truncating="post", padding="post")
     
     tags = pad_sequences(label_l, padding_value=end_token, max_len=opt.maxLen)
-    #tags = pad_sequences(label_l,
-    #                 maxlen=opt.maxLen, value=end_token, padding="post",
-    #                 dtype="long", truncating="post")
     attention_masks = [[float(i>0) for i in ii] for ii in input_ids]
     
     
-    return label_l, tokenized_texts, input_ids, tags, attention_masks, hash_token, end_token
+    return label_l, tokenized_texts, input_ids, tags, attention_masks, cleaned, hash_token, end_token
 
 

@@ -202,7 +202,7 @@ def test2list(ids: list, texts: list) -> list:
     flat_list_spacy = [item for sublist in berts for item in sublist]
     return flat_list_id, flat_list_text, flat_list_spacy
 
-def get_char_level(flat_list_i: list, flat_list_s: list, predictions_sample: list, cleaned: list, hash_token: int, end_token:int, prop_tech_e) -> pd.DataFrame:
+def get_char_level(flat_list_i: list, flat_list_s: list, predictions_sample: list, cleaned: list, hash_token: int, end_token:int, prop_tech) -> pd.DataFrame:
     counter = 0
     for x in predictions_sample:
         for j in x:
@@ -247,7 +247,7 @@ def get_char_level(flat_list_i: list, flat_list_s: list, predictions_sample: lis
     for i, x in enumerate(pred):
         a = flat_list_s[i]
         b = flat_list_i[i]
-        id_text, spans = get_spans(a, x, i, b, hash_token, end_token, prop_tech_e)
+        id_text, spans = get_spans(a, x, i, b, hash_token, end_token, prop_tech)
         if spans:
             for span in spans:
                 listid.append(id_text)
@@ -258,7 +258,7 @@ def get_char_level(flat_list_i: list, flat_list_s: list, predictions_sample: lis
     df = pd.DataFrame(df)
     return df
 
-def get_spans(a: list, labelx: list, i: int, id_text: str, hash_token, end_token, prop_tech_e):
+def get_spans(a: list, labelx: list, i: int, id_text: str, hash_token, end_token, prop_tech):
     #if i==35:
     #ipdb.set_trace()
     spans = []
@@ -275,7 +275,7 @@ def get_spans(a: list, labelx: list, i: int, id_text: str, hash_token, end_token
                 if prev != x and prev !=0:
                     span_e= a[i-1].idx + len(a[i-1])
                     span_len = 0
-                    spans.append([prop_tech_e[labelx[i-1]], span_f, span_e])
+                    spans.append([prop_tech[labelx[i-1]], span_f, span_e])
                     prev = x
                     span_f = a[i].idx
                     span_len = span_len+1
@@ -286,12 +286,12 @@ def get_spans(a: list, labelx: list, i: int, id_text: str, hash_token, end_token
                     if (i >= len(labelx)-1):
                         span_e= a[i].idx + len(a[i])
                         span_len = 0
-                        spans.append([prop_tech_e[labelx[i]], span_f, span_e])
+                        spans.append([prop_tech[labelx[i]], span_f, span_e])
                         continue
                 else:
                     span_e= a[i].idx + len(a[i])
                     span_len = 0
-                    spans.append([prop_tech_e[labelx[i]], span_f, span_e])
+                    spans.append([prop_tech[labelx[i]], span_f, span_e])
                     continue
                     
             else:
@@ -299,7 +299,7 @@ def get_spans(a: list, labelx: list, i: int, id_text: str, hash_token, end_token
                 if (span_len != 0):
                     span_e= a[i-1].idx+len(a[i-1])
                     span_len = 0
-                    spans.append([prop_tech_e[labelx[i-1]], span_f, span_e])
+                    spans.append([prop_tech[labelx[i-1]], span_f, span_e])
                     continue
         if x == hash_token:
             continue
@@ -308,7 +308,7 @@ def get_spans(a: list, labelx: list, i: int, id_text: str, hash_token, end_token
             if prev != x and prev !=0:
                 span_e= a[i-1].idx + len(a[i-1])
                 span_len = 0
-                spans.append([prop_tech_e[labelx[i-1]], span_f, span_e])
+                spans.append([prop_tech[labelx[i-1]], span_f, span_e])
                 prev = x
                 span_f = a[i].idx
                 span_len = span_len+1
@@ -319,13 +319,13 @@ def get_spans(a: list, labelx: list, i: int, id_text: str, hash_token, end_token
                 if (i >= len(labelx)-1):
                     span_e= a[i].idx + len(a[i])
                     span_len = 0
-                    spans.append([prop_tech_e[labelx[i]], span_f, span_e])
+                    spans.append([prop_tech[labelx[i]], span_f, span_e])
                     continue
             else:
                 if (i >= len(labelx)-1):
                     span_e= a[i].idx + len(a[i])
                     span_len = 0
-                    spans.append([prop_tech_e[labelx[i]], span_f, span_e])
+                    spans.append([prop_tech[labelx[i]], span_f, span_e])
                     continue
                 span_len = span_len+1
 
@@ -334,7 +334,7 @@ def get_spans(a: list, labelx: list, i: int, id_text: str, hash_token, end_token
             if (span_len != 0):
                 span_e= a[i-1].idx+len(a[i-1])
                 span_len = 0
-                spans.append([prop_tech_e[labelx[i-1]], span_f, span_e])
+                spans.append([prop_tech[labelx[i-1]], span_f, span_e])
                 continue
             if (i >= len(labelx)-1):
                 #span_e= a[i].idx + len(a[i])

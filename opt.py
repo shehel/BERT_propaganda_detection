@@ -8,10 +8,10 @@ parser.add_argument('--expID', default='default', type=str,
                     help='Experiment ID')
 parser.add_argument('--trainDataset', default='', type=str,
                     help='CSV file containing the training dataset')
+parser.add_argument('--evalDataset', default='', type=str,
+                    help='Directory containing validation articles')                    
 parser.add_argument('--testDataset', default='', type=str,
                     help='Directory containing test articles')                    
-parser.add_argument('--valDataset', default='', type=str,
-                    help='CSV file containing the validation dataset')               
 parser.add_argument('--snapshot', default=1, type=int,
                     help='How often to take a snapshot of the model (0 = never)')
 parser.add_argument('--classType', default="single_label", type=str,
@@ -24,7 +24,8 @@ parser.add_argument('--bio', default=False, type=bool,
                     help='Activate bio encoding')
 parser.add_argument('--techniques', default="tools/data/propaganda-techniques-names.txt", type=str,
                     help='Directory and name of the file that contains names of the techniques.')
-
+parser.add_argument('--train', default = False, type=bool,
+                    help='If set to False, only test on the given model')
 "----------------------------- Model options -----------------------------"
 parser.add_argument('--model', default="bert-base-cased", type=str,
                     help='Select a model to be trained: bert-base-cased|bert-base-uncased|bert-large-uncased|bert-large-cased')
