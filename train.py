@@ -88,8 +88,6 @@ def main():
     valid_data = TensorDataset(val_inputs, val_masks, val_tags)
     valid_sampler = SequentialSampler(valid_data)
     valid_dataloader = DataLoader(valid_data, sampler=valid_sampler, batch_size=opt.trainBatch)
-
-    
     # Model Initialize
     model = BertForTokenClassification.from_pretrained(opt.model, num_labels=opt.nLabels);
     if opt.loadModel:
@@ -140,10 +138,7 @@ def main():
 
     # F1 score shouldn't consider no-propaganda
     # and other auxiliary labels
-    if (opt.classType == "all_class"):
-        scorred_labels = list(range(1, 19))
-    else:
-        scorred_labels = [1]
+    scorred_labels = list(range(1,(opt.nLabels-2)))
 
     global_step = 0
     nb_tr_steps = 0
