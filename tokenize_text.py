@@ -106,6 +106,4 @@ def make_set(data_dir: str, tokenizer, class_type: str, bio: bool = False) -> li
     attention_masks = [[float(i>0) for i in ii] for ii in input_ids]
     
     
-    return label_l, tokenized_texts, input_ids, tags, attention_masks, cleaned, hash_token, end_token
-
-
+    return label_l, tokenized_texts, input_ids, tags, attention_masks, hash_token, end_token

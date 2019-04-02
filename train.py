@@ -48,11 +48,12 @@ def main():
     tokenizer = BertTokenizer.from_pretrained(opt.model, do_lower_case=opt.lowerCase);
 
     # Load Tokenized train and validation datasets
-    trn_tokenized_texts, trn_label_l, tr_inputs, tr_tags, tr_masks, _,hash_token, end_token = make_set(opt.trainDataset, tokenizer, opt.classType, opt.bio)
-    val_tokenized_texts, val_label_l, val_inputs, val_tags, val_masks, cleaned, hash_token, end_token = make_set(opt.evalDataset, tokenizer, opt.classType, opt.bio)
+    trn_tokenized_texts, trn_label_l, tr_inputs, tr_tags, tr_masks, hash_token, end_token = make_set(opt.trainDataset, tokenizer, opt.classType, opt.bio)
+    val_tokenized_texts, val_label_l, val_inputs, val_tags, val_masks, hash_token, end_token = make_set(opt.evalDataset, tokenizer, opt.classType, opt.bio)
 
     ids, texts, _ = read_data(opt.testDataset, isLabels = False)
     flat_list_i, flat_list, flat_list_s = test2list(ids, texts)
+    cleaned = [[tokenizer.tokenize(words) for words in sent] for sent in flat_list]
 
     logging.info("Dataset loaded")
     logging.info("Labels detected in train dataset: %s" % (np.unique(tr_tags)))
@@ -237,10 +238,10 @@ def main():
         else:
             out_file = ("exp/{}/{}/temp_score.csv".format(opt.classType, opt.expID))
         if opt.classType != "binary":
-            char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", "./tools/data/propaganda-techniques-names.txt", "-l", out_file])
+            char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", opt.techniques, "-l", out_file])
         else:
-            char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", "./tools/data/propaganda-techniques-names.txt", "-f", "-l", out_file])
-        print (char_predict)
+            char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", opt.techniques, "-f", "-l", out_file])
+        logging.info("F1 (Official Scorer): ", char_predict)
          
         # early_stopping needs the validation loss to check if it has decresed, 
         # and if it has, it will make a checkpoint of the current model
@@ -270,7 +271,7 @@ def main():
         '''if f1_macro > best and i > 3:
         # Save a trained model and the associated configuration
             torch.save(
-                model.state_dict(), './exp/{}/{}/best_model.pth'.format(opt.classType, opt.expID))
+
             torch.save(
                 opt, './exp/{}/{}/option.pth'.format(opt.classType, opt.expID))
             torch.save(
