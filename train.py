@@ -226,11 +226,16 @@ def main():
         # Get char level score
         df = get_char_level(flat_list_i, flat_list_s, predictions, cleaned, hash_token, end_token, prop_tech)
         postfix = opt.testDataset.rsplit('/', 2)[-2]
-        out_dir = opt.loadModel.rsplit('/', 1)[0] + "/pred." + postfix
+        if opt.loadModel:
+            out_dir = opt.loadModel.rsplit('/', 1)[0] + "/pred." + postfix
+        else:
+            out_dir = ("exp/{}/{}/temp_pred.csv".format(opt.classType, opt.expID))
         df.to_csv(out_dir, sep='\t', index=False, header=False) 
         logging.info("Predictions written to: %s" % (out_dir))
-
-        out_file = opt.loadModel.rsplit('/', 1)[0] + "/score." + postfix
+        if opt.loadModel:
+            out_file = opt.loadModel.rsplit('/', 1)[0] + "/score." + postfix
+        else:
+            out_file = ("exp/{}/{}/temp_score.csv".format(opt.classType, opt.expID))
         if opt.classType != "binary":
             char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", "./tools/data/propaganda-techniques-names.txt", "-l", out_file])
         else:
