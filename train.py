@@ -96,23 +96,6 @@ def main():
 
     # Model Initialize
     model = BertForTokenClassification.from_pretrained(opt.model, num_labels=opt.nLabels);
-    if opt.loadModel:
-        print('Loading Model from {}'.format(opt.loadModel))
-        model.load_state_dict(torch.load(opt.loadModel))
-        if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
-            try:
-                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
-            except FileNotFoundError:
-                os.mkdir("./exp/{}".format(opt.classType))
-                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
-    else:
-        print('Create new model')
-        if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
-            try:
-                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
-            except FileNotFoundError:
-                os.mkdir("./exp/{}".format(opt.classType))
-                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
 
     loss_scale = 0
     warmup_proportion = 0.1
@@ -141,6 +124,24 @@ def main():
     if n_gpu > 1:
         model = torch.nn.DataParallel(model)
         logging.info("Training beginning on: %s" % n_gpu)
+
+    if opt.loadModel:
+        print('Loading Model from {}'.format(opt.loadModel))
+        model.load_state_dict(torch.load(opt.loadModel))
+        if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
+            try:
+                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
+            except FileNotFoundError:
+                os.mkdir("./exp/{}".format(opt.classType))
+                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
+    else:
+        print('Create new model')
+        if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
+            try:
+                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
+            except FileNotFoundError:
+                os.mkdir("./exp/{}".format(opt.classType))
+                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
 
     # F1 score shouldn't consider no-propaganda
     # and other auxiliary labels
