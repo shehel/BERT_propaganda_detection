@@ -46,14 +46,14 @@ def main():
     logging.info("GPUs Detected: %s" % (n_gpu))
 
     tokenizer = BertTokenizer.from_pretrained(opt.model, do_lower_case=opt.lowerCase);
-
+    print (hash_token, end_token)
     # Load Tokenized train and validation datasets
-    trn_tokenized_texts, trn_label_l, tr_inputs, tr_tags, tr_masks, hash_token, end_token = make_set(opt.trainDataset, tokenizer, opt.classType, opt.bio)
-    val_tokenized_texts, val_label_l, val_inputs, val_tags, val_masks, hash_token, end_token = make_set(opt.evalDataset, tokenizer, opt.classType, opt.bio)
+    tr_inputs, tr_tags, tr_masks = make_set(p2id, opt.trainDataset, tokenizer, opt.binaryLabel, hash_token, end_token)
+    val_inputs, val_tags, val_masks, cleaned, flat_list_i, flat_list, flat_list_s = make_val_set(p2id, opt.evalDataset,
+                                                                                             tokenizer, opt.binaryLabel, hash_token, end_token)
 
-    ids, texts, _ = read_data(opt.testDataset, isLabels = False)
-    flat_list_i, flat_list, flat_list_s = test2list(ids, texts)
-    cleaned = [[tokenizer.tokenize(words) for words in sent] for sent in flat_list]
+    # ids, texts, _ = read_data(opt.testDataset, isLabels = False)
+    # flat_list_i, flat_list, flat_list_s = test2list(ids, texts)
 
     logging.info("Dataset loaded")
     logging.info("Labels detected in train dataset: %s" % (np.unique(tr_tags)))
@@ -67,8 +67,7 @@ def main():
     # probs = 1./total_tags
     # train_tokenweights = probs[tr_tags]
     # weightage = np.sum(train_tokenweights, axis=1)
-    
-    # Alternate method for weighting
+       # Alternate method for weighting
     ws = np.ones((opt.nLabels,))
     ws[0] = 0
     
@@ -97,11 +96,6 @@ def main():
 
     # Model Initialize
     model = BertForTokenClassification.from_pretrained(opt.model, num_labels=opt.nLabels);
-    model.to(device)
-    
-    if n_gpu > 1:
-        model = torch.nn.DataParallel(model)
-        logging.info("Training beginning on: %s" % n_gpu)
     if opt.loadModel:
         print('Loading Model from {}'.format(opt.loadModel))
         model.load_state_dict(torch.load(opt.loadModel))
@@ -142,7 +136,11 @@ def main():
                          warmup=warmup_proportion,
                          t_total=num_train_optimization_steps) 
     
+    model.to(device)
     
+    if n_gpu > 1:
+        model = torch.nn.DataParallel(model)
+        logging.info("Training beginning on: %s" % n_gpu)
 
     # F1 score shouldn't consider no-propaganda
     # and other auxiliary labels
@@ -224,7 +222,7 @@ def main():
         validlosses.append(eval_loss)
         f1scores.append(f1_macro) 
         
-        # Get char level score
+        
         df = get_char_level(flat_list_i, flat_list_s, predictions, cleaned, hash_token, end_token, prop_tech)
         postfix = opt.testDataset.rsplit('/', 2)[-2]
         if opt.loadModel:
@@ -233,15 +231,17 @@ def main():
             out_dir = ("exp/{}/{}/temp_pred.csv".format(opt.classType, opt.expID))
         df.to_csv(out_dir, sep='\t', index=False, header=False) 
         logging.info("Predictions written to: %s" % (out_dir))
+
         if opt.loadModel:
             out_file = opt.loadModel.rsplit('/', 1)[0] + "/score." + postfix
         else:
             out_file = ("exp/{}/{}/temp_score.csv".format(opt.classType, opt.expID))
+
         if opt.classType != "binary":
-            char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", opt.techniques, "-l", out_file])
+            char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", "./tools/data/propaganda-techniques-names.txt", "-l", out_file])
         else:
-            char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", opt.techniques, "-f", "-l", out_file])
-        logging.info("F1 (Official Scorer): ", char_predict)
+            char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", "./tools/data/propaganda-techniques-names.txt", "-f", "-l", out_file])
+        print (char_predict)
          
         # early_stopping needs the validation loss to check if it has decresed, 
         # and if it has, it will make a checkpoint of the current model
@@ -271,7 +271,7 @@ def main():
         '''if f1_macro > best and i > 3:
         # Save a trained model and the associated configuration
             torch.save(
-
+                model.state_dict(), './exp/{}/{}/best_model.pth'.format(opt.classType, opt.expID))
             torch.save(
                 opt, './exp/{}/{}/option.pth'.format(opt.classType, opt.expID))
             torch.save(

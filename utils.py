@@ -154,7 +154,7 @@ def load_technique_names_from_file(filename: str) -> list:
     with open(filename, "r") as f:
         return [ line.rstrip() for line in f.readlines() ]
         
-def read_data(path: str, isLabels: bool = True, binary: bool = None) -> list:
+def read_data(path: str, isLabels: bool = True, binary: str = None) -> list:
     directory = pathlib.Path(path)
     ids = []
     texts = []
@@ -169,7 +169,7 @@ def read_data(path: str, isLabels: bool = True, binary: bool = None) -> list:
 
     return [ids, docs, labels]
 
-def parse_label(label_path: str, binary: bool = None) -> list:
+def parse_label(label_path: str, binary: str = None) -> list:
     # idx, type, start, end
     labels = []
     f= Path(label_path)
@@ -188,6 +188,7 @@ def parse_label(label_path: str, binary: bool = None) -> list:
 
     return sorted(labels)
 def corpus2list(p2id: dict, ids: list, texts: list, labels: list, binary: bool = False, bio: bool = False) -> list:
+    print (p2id)
     berti, bertt, bertl, berts = zip(*[bert_list(p2id, d, l, idx, binary, bio) for d, l, idx in zip(texts, labels, ids)])
     flat_list_text = [item for sublist in bertt for item in sublist]
     flat_list_label = [item for sublist in bertl for item in sublist]
@@ -200,7 +201,8 @@ def test2list(ids: list, texts: list) -> list:
     flat_list_text = [item for sublist in bertt for item in sublist]
     flat_list_id = [item for sublist in berti for item in sublist]
     flat_list_spacy = [item for sublist in berts for item in sublist]
-    return flat_list_id, flat_list_text, flat_list_spacy
+    flat_list_l = None
+    return flat_list_id, flat_list_text, flat_list_l, flat_list_spacy
 
 def get_char_level(flat_list_i: list, flat_list_s: list, predictions_sample: list, cleaned: list, hash_token: int, end_token:int, prop_tech) -> pd.DataFrame:
     counter = 0
