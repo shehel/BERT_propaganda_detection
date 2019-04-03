@@ -1,3 +1,4 @@
+import pickle
 import logging
 from tokenize_text import *
 import tools.task3_scorer_onefile
@@ -214,6 +215,7 @@ def main():
             
             nb_eval_examples += b_input_ids.size(0)
             nb_eval_steps += 1
+        pickle.dump(predictions, open( "output.p", "wb"))
         eval_loss = eval_loss/nb_eval_steps
         logging.info("Validation loss: %s" % (eval_loss))    
         logging.info("Precision, Recall, F1-Score, Support: {}".format(f1(list(itertools.chain(*predictions)), list(itertools.chain(*val_tags)), average=None)))
