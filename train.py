@@ -60,13 +60,13 @@ def main():
     logging.info("Labels detected in val dataset: %s" % (np.unique(val_tags)))
 
     # Balanced Sampling
-    # total_tags = np.zeros((opt.nLabels,))
-    # for x in tr_tags:
-    #     total_tags = total_tags+np.bincount(x)
+    total_tags = np.zeros((opt.nLabels,))
+    for x in tr_tags:
+         total_tags = total_tags+np.bincount(x)
     
-    # probs = 1./total_tags
-    # train_tokenweights = probs[tr_tags]
-    # weightage = np.sum(train_tokenweights, axis=1)
+    probs = 1./total_tags
+    train_tokenweights = probs[tr_tags]
+    weightage = np.sum(train_tokenweights, axis=1)
        # Alternate method for weighting
     ws = np.ones((opt.nLabels,))
     ws[0] = 0
@@ -86,8 +86,8 @@ def main():
     
     # Create Dataloaders
     train_data = TensorDataset(tr_inputs, tr_masks, tr_tags)
-    #train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
-    train_sampler = SequentialSampler(train_data)
+    train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
+    #train_sampler = SequentialSampler(train_data)
     train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=opt.trainBatch)
 
     valid_data = TensorDataset(val_inputs, val_masks, val_tags)
@@ -238,9 +238,9 @@ def main():
             out_file = ("exp/{}/{}/temp_score.csv".format(opt.classType, opt.expID))
 
         if opt.classType != "binary":
-            char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", "./tools/data/propaganda-techniques-names.txt", "-l", out_file])
+            char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", opt.techniques, "-l", out_file])
         else:
-            char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", "./tools/data/propaganda-techniques-names.txt", "-f", "-l", out_file])
+            char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", opt.techniques, "-f", "-l", out_file])
         print (char_predict)
          
         # early_stopping needs the validation loss to check if it has decresed, 
