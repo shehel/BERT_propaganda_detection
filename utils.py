@@ -194,6 +194,7 @@ def corpus2list(p2id: dict, ids: list, texts: list, labels: list, binary: bool =
     flat_list_label = [item for sublist in bertl for item in sublist]
     flat_list_id = [item for sublist in berti for item in sublist]
     flat_list_spacy = [item for sublist in berts for item in sublist]
+    #print (flat_list_text[0])
     return flat_list_id, flat_list_text, flat_list_label, flat_list_spacy
 
 def test2list(ids: list, texts: list) -> list:

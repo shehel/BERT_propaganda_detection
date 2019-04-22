@@ -109,7 +109,7 @@ def make_set(p2id, data_dir: str, tokenizer, single_class: str,
     attention_masks = [[float(i>0) for i in ii] for ii in input_ids]
     
     
-    return input_ids, tags, attention_masks
+    return input_ids, tags, attention_masks, label_l
 
 
 def make_val_set(p2id, data_dir: str, tokenizer, single_class: str, 
@@ -127,6 +127,7 @@ def make_val_set(p2id, data_dir: str, tokenizer, single_class: str,
     spacy = (dataset[3])
     cleaned = [[tokenizer.tokenize(words) for words in sent] for sent in terms]
     tokenized_texts = [concatenate_list_data(sent) for sent in cleaned]
+
     if bio:
         label_l = bio_encoding(cleaned, labels)
     else:
@@ -139,4 +140,4 @@ def make_val_set(p2id, data_dir: str, tokenizer, single_class: str,
     attention_masks = [[float(i>0) for i in ii] for ii in input_ids]
     
     
-    return input_ids, tags, attention_masks, cleaned, ids, terms, spacy
+    return input_ids, tags, attention_masks, cleaned, ids, terms, spacy, label_l

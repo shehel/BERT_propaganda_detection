@@ -21,6 +21,21 @@ from opt import opt
 import itertools
 import os
 
+import matplotlib.pyplot as plt 
+
+def get_task2(predictions):
+    preddi = []
+    found = False
+    for x in predictions:
+        for j in x:
+            if j==1:
+                preddi.append(1)
+                found = True
+                break
+        if not found:
+            preddi.append(0)
+        found = False
+    return preddi
 def make_logger() -> None:
     if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
             try:
@@ -37,6 +52,33 @@ def make_logger() -> None:
 
     logging.getLogger().addHandler(logging.StreamHandler())
 
+def draw_curves(trainlosses, validlosses, f1scores, f1scores_word, task2_scores) -> None:
+    x = list(range(len(validlosses)))
+    # plotting the line 1 points  
+    plt.plot(x, trainlosses, label = "Train loss") 
+
+    # plotting the line 2 points  
+    plt.plot(x, validlosses, label = "Validation losses") 
+
+    # line 3 points 
+    # plotting the line 2 points  
+    plt.plot(x, f1scores, label = "F1 scores char level") 
+    
+    plt.plot(x, f1scores_word, label = "F1 scores word level") 
+    plt.plot(x, task2_scores, label = "F1 scores task2") 
+
+    # naming the x axis 
+    plt.xlabel('Epochs') 
+    # naming the y axis 
+    plt.ylabel('Metric') 
+    # giving a title to my graph 
+    plt.title('Training Curves') 
+    #plt.yscale('log')
+    # show a legend on the plot 
+    plt.legend() 
+  
+    plt.savefig("exp/{}/{}/learning_curves.png".format(opt.classType, opt.expID))
+    
 def main():
     os.environ['CUDA_VISIBLE_DEVICES']='0,1,2,3,4'
     make_logger()
@@ -45,17 +87,19 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     n_gpu = torch.cuda.device_count(); 
     logging.info("GPUs Detected: %s" % (n_gpu))
+    scorred_labels = list(range(1,(opt.nLabels-2)))
 
     tokenizer = BertTokenizer.from_pretrained(opt.model, do_lower_case=opt.lowerCase);
     print (hash_token, end_token)
     # Load Tokenized train and validation datasets
-    tr_inputs, tr_tags, tr_masks = make_set(p2id, opt.trainDataset, tokenizer, opt.binaryLabel, hash_token, end_token)
-    val_inputs, val_tags, val_masks, cleaned, flat_list_i, flat_list, flat_list_s = make_val_set(p2id, opt.evalDataset,
+    tr_inputs, tr_tags, tr_masks, _ = make_set(p2id, opt.trainDataset, tokenizer, opt.binaryLabel, hash_token, end_token)
+    val_inputs, val_tags, val_masks, cleaned, flat_list_i, flat_list, flat_list_s,_ = make_val_set(p2id, opt.evalDataset,
                                                                                              tokenizer, opt.binaryLabel, hash_token, end_token)
-
+    printable = tr_tags
     # ids, texts, _ = read_data(opt.testDataset, isLabels = False)
     # flat_list_i, flat_list, flat_list_s = test2list(ids, texts)
-
+    truth_task2 = get_task2(val_tags)
+    
     logging.info("Dataset loaded")
     logging.info("Labels detected in train dataset: %s" % (np.unique(tr_tags)))
     logging.info("Labels detected in val dataset: %s" % (np.unique(val_tags)))
@@ -74,6 +118,7 @@ def main():
     
     ws[hash_token] = 0
     ws[end_token] = 0
+    ws = ws+0.3
     prob = [max(x) for x in ws[tr_tags]]
     weightage = [x + y for x, y in zip(prob, (len(prob)*[0.1]))]    
     
@@ -88,7 +133,7 @@ def main():
     # Create Dataloaders
     train_data = TensorDataset(tr_inputs, tr_masks, tr_tags)
     train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
-    #train_sampler = SequentialSampler(train_data)
+    #train_sampler = RandomSampler(train_data)
     train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=opt.trainBatch)
 
     valid_data = TensorDataset(val_inputs, val_masks, val_tags)
@@ -146,7 +191,6 @@ def main():
 
     # F1 score shouldn't consider no-propaganda
     # and other auxiliary labels
-    scorred_labels = list(range(1,(opt.nLabels-2)))
 
     global_step = 0
     nb_tr_steps = 0
@@ -154,10 +198,11 @@ def main():
     max_grad_norm = 1.0
     best = 0
     early_stopping = EarlyStopping(patience=opt.patience, verbose=True)
-    trainlosses = []
-    validlosses = []
-    f1scores = []
-
+    train_losses = []
+    valid_losses = []
+    f1_scores = []
+    f1_scores_word = []
+    task2_scores = []
     for i in trange(opt.nEpochs, desc="Epoch"):
         # TRAIN loop
         # Start only if train flag was passed
@@ -187,7 +232,7 @@ def main():
                 optimizer.zero_grad()
                 global_step += 1
             logging.info(f'EPOCH {i} done: Train Loss {(tr_loss/nb_tr_steps)}')
-            trainlosses.append(tr_loss/nb_tr_steps)
+            train_losses.append(tr_loss/nb_tr_steps)
        
         # Evaluation on validation set or test set
         model.eval()
@@ -215,16 +260,19 @@ def main():
             
             nb_eval_examples += b_input_ids.size(0)
             nb_eval_steps += 1
-        pickle.dump(predictions, open( "output.p", "wb"))
+        pred_task2 = get_task2(predictions)
+        logging.info("Precision, Recall, F1-Score, Support Task2: {}".format(f1(pred_task2, truth_task2, average=None)))
+        f1_macro = f1_score(pred_task2, truth_task2, labels=scorred_labels, average="macro")
+        task2_scores.append(f1_macro)
+        pickle.dump(printable, open( "output_.p", "wb"))
         eval_loss = eval_loss/nb_eval_steps
         logging.info("Validation loss: %s" % (eval_loss))    
         logging.info("Precision, Recall, F1-Score, Support: {}".format(f1(list(itertools.chain(*predictions)), list(itertools.chain(*val_tags)), average=None)))
         f1_macro = f1_score(list(itertools.chain(*predictions)), list(itertools.chain(*val_tags)), labels=scorred_labels, average="macro")
         logging.info("F1 Macro Dev Set: %s" % f1_macro)
         logging.info("Learning Rate: %s" % (optimizer.get_lr()[0]))
-        validlosses.append(eval_loss)
-        f1scores.append(f1_macro) 
-        
+        valid_losses.append(eval_loss)
+        f1_scores_word.append(f1_macro)
         
         df = get_char_level(flat_list_i, flat_list_s, predictions, cleaned, hash_token, end_token, prop_tech)
         postfix = opt.testDataset.rsplit('/', 2)[-2]
@@ -244,6 +292,7 @@ def main():
             char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", opt.techniques, "-l", out_file])
         else:
             char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", opt.techniques, "-f", "-l", out_file])
+        f1_scores.append(char_predict) 
         print (char_predict)
          
         # early_stopping needs the validation loss to check if it has decresed, 
@@ -285,13 +334,14 @@ def main():
             best = f1_macro
             logging.info("New best model")
         '''
-    # if opt.train:
-    #     logging.info("Training Finished")
-    #     df = pd.DataFrame({'col':trainlosses})
-    #     df.to_csv("trainlosses.csv", sep='\t', index=False, header=False) 
-    #     df = pd.DataFrame({'col':validlosses})
-    #     df.to_csv("validlosses.csv", sep='\t', index=False, header=False) 
-    #     df = pd.DataFrame({'col':f1scores})
-    #     df.to_csv("f1scores.csv", sep='\t', index=False, header=False) 
+    if opt.train:
+        logging.info("Training Finished. Learning curves saved.")
+        draw_curves(train_losses, valid_losses, f1_scores, f1_scores_word, task2_scores)
+        #df = pd.DataFrame({'col':trainlosses})
+        #df.to_csv("trainlosses.csv", sep='\t', index=False, header=False) 
+        #df = pd.DataFrame({'col':validlosses})
+        #df.to_csv("validlosses.csv", sep='\t', index=False, header=False) 
+        #df = pd.DataFrame({'col':f1scores})
+        #df.to_csv("f1scores.csv", sep='\t', index=False, header=False) 
 if __name__ == '__main__':
     main()
