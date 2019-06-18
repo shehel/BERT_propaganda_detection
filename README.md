@@ -3,18 +3,15 @@ Sequence classification for propaganda dataset (QCRI)
 
 1. pip install -r requirements.txt 
 2. Run python -m spacy download en
-3. dataset_train.csv and dataset_dev.csv are created from datasets_v5 by running preprocess.py on it. To create a different 
+3. Raw dataset is converted into intermediate pickle files by running preprocess.py on it. To create a different 
 dataset, run preprocess.py to generate train and dev files.
 eg: <br>
-```python preprocess.py -d [path to articles and labels directory] -o [name of output file] -s Propaganda```
-<br>-s and -b are additional flags used to get binary label dataset and bio formatted dataset respectively. 
+```python preprocess.py -d [path to articles and labels directory] -o [name of output file] -l```
+<br>-l flag preserves labels if included. 
 4. Create folder ```./exp``` - This is where the logs and model states will be stored for training runs. 
 5. Run the trainer, for example <br>
-```python train.py --expID test_run --trainDataset dataset_train.csv --valDataset dataset_dev.csv --model bert-base-cased --LR 3e-5 --trainBatch 12 --nEpochs 5 --classType binary --nLabels 4```
+```python train.py --expID test_run1--trainDataset train.p --evalDataset dev.p --model bert-base-cased --LR 3e-5 --trainBatch 32 --nEpochs 5 --classType all_class --nLabels 21 --testDataset datasets-v5/tasks-2-3/dev --train True & ```
 
-6. Run python predict.py to get output in the character level. For example: <br>
-```python predict.py --testDataset datasets-v5/tasks-2-3/dev/ --model bert-base-cased --validBatch 12 --loadModel exp/binary/binary_2E/1/model_1.pth --outputFile pred.csv --classType binary --nLabels 4 --binaryLabel Loaded_Language```
-(Loaded Language is placeholder in the binary case)
 
 ## Tested on:
 huggingface/pytorch-pretrained-BERT **0.4 **<br>
@@ -24,6 +21,7 @@ Torch 1.0 <br>
 <br>
 Python 3.6.8 <br>
 CUDA 9
+
 
 # Evaluation 
 

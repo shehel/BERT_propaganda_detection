@@ -80,7 +80,7 @@ def draw_curves(trainlosses, validlosses, f1scores, f1scores_word, task2_scores)
     plt.savefig("exp/{}/{}/learning_curves.png".format(opt.classType, opt.expID))
     
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES']='0,1,2,3,4'
+    #os.environ['CUDA_VISIBLE_DEVICES']='0,1,2,3,4'
     make_logger()
     prop_tech_e, prop_tech, hash_token, end_token, p2id = settings(opt.techniques, opt.binaryLabel, opt.bio)
     logging.info("Training for class %s" % (opt.binaryLabel))
@@ -132,8 +132,8 @@ def main():
     
     # Create Dataloaders
     train_data = TensorDataset(tr_inputs, tr_masks, tr_tags)
-    train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
-    #train_sampler = RandomSampler(train_data)
+    #train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
+    train_sampler = RandomSampler(train_data)
     train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=opt.trainBatch)
 
     valid_data = TensorDataset(val_inputs, val_masks, val_tags)
