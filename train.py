@@ -132,8 +132,8 @@ def main():
     
     # Create Dataloaders
     train_data = TensorDataset(tr_inputs, tr_masks, tr_tags)
-    #train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
-    train_sampler = RandomSampler(train_data)
+    train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
+    #train_sampler = RandomSampler(train_data)
     train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=opt.trainBatch)
 
     valid_data = TensorDataset(val_inputs, val_masks, val_tags)
