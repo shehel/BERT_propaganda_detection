@@ -26,6 +26,10 @@ parser.add_argument('--techniques', default="tools/data/propaganda-techniques-na
                     help='Directory and name of the file that contains names of the techniques.')
 parser.add_argument('--train', default = False, type=bool,
                     help='If set to False, only test on the given model')
+parser.add_argument('--seed', default = 984, type=int,
+                    help='Seed value')
+parser.add_argument('--fp16', default = False, type=bool,
+                    help='Half precision training')
 "----------------------------- Model options -----------------------------"
 parser.add_argument('--model', default="bert-base-cased", type=str,
                     help='Select a model to be trained: bert-base-cased|bert-base-uncased|bert-large-uncased|bert-large-cased')
@@ -38,6 +42,7 @@ parser.add_argument('--loadModel', default=None, type=str,
 
 parser.add_argument('--maxLen', default=210, type=float,
                     help='Max length of tokens in a single training sample')
+
 "----------------------------- Hyperparameter options -----------------------------"
 parser.add_argument('--LR', default=1e-3, type=float,
                     help='Learning rate')

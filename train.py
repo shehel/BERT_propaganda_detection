@@ -8,7 +8,7 @@ import pandas as pd
 import torch
 from pytorch_pretrained_bert import (BasicTokenizer, BertConfig,
                                      BertForTokenClassification, BertTokenizer)
-from pytorch_pretrained_bert.optimization import BertAdam, warmup_linear
+from pytorch_pretrained_bert.optimization import BertAdam, WarmupLinearSchedule
 from sklearn.metrics import f1_score
 from sklearn.metrics import precision_recall_fscore_support as f1
 from sklearn.model_selection import train_test_split
@@ -36,6 +36,7 @@ def get_task2(predictions):
             preddi.append(0)
         found = False
     return preddi
+
 def make_logger() -> None:
     if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
             try:
@@ -80,12 +81,20 @@ def draw_curves(trainlosses, validlosses, f1scores, f1scores_word, task2_scores)
     plt.savefig("exp/{}/{}/learning_curves.png".format(opt.classType, opt.expID))
     
 def main():
+    
     #os.environ['CUDA_VISIBLE_DEVICES']='0,1,2,3,4'
     make_logger()
     prop_tech_e, prop_tech, hash_token, end_token, p2id = settings(opt.techniques, opt.binaryLabel, opt.bio)
     logging.info("Training for class %s" % (opt.binaryLabel))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    n_gpu = torch.cuda.device_count(); 
+    n_gpu = torch.cuda.device_count();
+    
+    #random.seed(opt.seed)
+    np.random.seed(opt.seed)
+    torch.manual_seed(opt.seed)
+    if n_gpu > 0:
+        torch.cuda.manual_seed_all(opt.seed)
+        
     logging.info("GPUs Detected: %s" % (n_gpu))
     scorred_labels = list(range(1,(opt.nLabels-2)))
 
@@ -142,15 +151,19 @@ def main():
 
     # Model Initialize
     model = BertForTokenClassification.from_pretrained(opt.model, num_labels=opt.nLabels);
-
+    
+    if opt.fp16:
+        model.half()
+        
     loss_scale = 0
     warmup_proportion = 0.1
+
     num_train_optimization_steps = int(len(train_data) / opt.trainBatch ) * opt.nEpochs
     
     # Prepare optimizer
     param_optimizer = list(model.named_parameters())
 
-    # hack to remove pooler, which is not usedpython train.py --expID test --trainDataset dataset_train.csv --evalDataset dataset_dev.csv --model bert-base-cased --LR 3e-5 --trainBatch 12 --nEpochs 1
+    # hack to remove pooler, which is not used
     # thus it produce None grad that break apex
     param_optimizer = [n for n in param_optimizer if 'pooler' not in n[0]]
 
@@ -159,6 +172,24 @@ def main():
         {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
         {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
     ]
+    
+    if opt.fp16:
+            try:
+                from apex.optimizers import FP16_Optimizer
+                from apex.optimizers import FusedAdam
+            except ImportError:
+                raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.")
+
+            optimizer = FusedAdam(optimizer_grouped_parameters,
+                                  lr=opt.LR,
+                                  bias_correction=False,
+                                  max_grad_norm=1.0)
+            if loss_scale == 0:
+                optimizer = FP16_Optimizer(optimizer, dynamic_loss_scale=True)
+            else:
+                optimizer = FP16_Optimizer(optimizer, static_loss_scale=0)
+                warmup_linear = WarmupLinearSchedule(warmup=warmup_proportion,
+                         t_total=num_train_optimization_steps)
     # t_total matters
     optimizer = BertAdam(optimizer_grouped_parameters,
                          lr=opt.LR,
@@ -222,12 +253,20 @@ def main():
                     loss = loss.mean()
 
                 # backward pass
-                loss.backward()
-
+                if opt.fp16:
+                    optimizer.backward(loss)
+                else:
+                    loss.backward()
                 tr_loss += loss.item()
                 nb_tr_examples += b_input_ids.size(0)
                 nb_tr_steps += 1
-
+                
+                if opt.fp16:
+                    # modify learning rate with special warm up BERT uses
+                    # if args.fp16 is False, BertAdam is used that handles this automatically
+                    lr_this_step = opt.LR * warmup_linear.get_lr(global_step, warmup_proportion)
+                    for param_group in optimizer.param_groups:
+                        param_group['lr'] = lr_this_step
                 optimizer.step()
                 optimizer.zero_grad()
                 global_step += 1
