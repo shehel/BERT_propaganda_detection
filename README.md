@@ -1,15 +1,15 @@
 # task3
 Sequence classification for propaganda dataset (QCRI)
 
-1. pip install -r requirements.txt 
-2. Run python -m spacy download en
-3. Raw dataset is converted into intermediate pickle files by running preprocess.py on it. To create a different 
-dataset, run preprocess.py to generate train and dev files.
+1. ```pip install -r requirements.txt``` 
+2. ```python -m spacy download en```
+3. ```sh tools/split-train.sh``` 
+4. Raw dataset is converted into intermediate pickle files by running preprocess.py on it. Run preprocess.py to generate train and dev files.
 eg: <br>
 ```python preprocess.py -d [path to articles and labels directory] -o [name of output file] -l```
 <br>-l flag preserves labels if included. 
-4. Create folder ```./exp``` - This is where the logs and model states will be stored for training runs. 
-5. Run the trainer, for example <br>
+5. Create folder ```./exp``` - This is where the logs and model states will be stored for training runs. 
+6. Run the trainer, for example <br>
 ```python train.py --expID test_run1--trainDataset train.p --evalDataset dev.p --model bert-base-cased --LR 3e-5 --trainBatch 32 --nEpochs 5 --classType all_class --nLabels 21 --testDataset datasets-v5/tasks-2-3/dev --train True & ```
 
 

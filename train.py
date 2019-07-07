@@ -154,7 +154,12 @@ def main():
     
     if opt.fp16:
         model.half()
-        
+    model.to(device)
+    if n_gpu > 1:
+        model = torch.nn.DataParallel(model)
+        logging.info("Training beginning on: %s" % n_gpu)
+
+
     loss_scale = 0
     warmup_proportion = 0.1
 
@@ -188,20 +193,16 @@ def main():
                 optimizer = FP16_Optimizer(optimizer, dynamic_loss_scale=True)
             else:
                 optimizer = FP16_Optimizer(optimizer, static_loss_scale=0)
-                warmup_linear = WarmupLinearSchedule(warmup=warmup_proportion,
+            warmup_linear = WarmupLinearSchedule(warmup=warmup_proportion,
                          t_total=num_train_optimization_steps)
     # t_total matters
-    optimizer = BertAdam(optimizer_grouped_parameters,
+    else:
+            optimizer = BertAdam(optimizer_grouped_parameters,
                          lr=opt.LR,
                          warmup=warmup_proportion,
                          t_total=num_train_optimization_steps) 
     
-    model.to(device)
     
-    if n_gpu > 1:
-        model = torch.nn.DataParallel(model)
-        logging.info("Training beginning on: %s" % n_gpu)
-
     if opt.loadModel:
         print('Loading Model from {}'.format(opt.loadModel))
         model.load_state_dict(torch.load(opt.loadModel))
@@ -309,7 +310,7 @@ def main():
         logging.info("Precision, Recall, F1-Score, Support: {}".format(f1(list(itertools.chain(*predictions)), list(itertools.chain(*val_tags)), average=None)))
         f1_macro = f1_score(list(itertools.chain(*predictions)), list(itertools.chain(*val_tags)), labels=scorred_labels, average="macro")
         logging.info("F1 Macro Dev Set: %s" % f1_macro)
-        logging.info("Learning Rate: %s" % (optimizer.get_lr()[0]))
+        #logging.info("Learning Rate: %s" % (optimizer.get_lr()[0]))
         valid_losses.append(eval_loss)
         f1_scores_word.append(f1_macro)
         

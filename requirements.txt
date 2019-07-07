@@ -1,8 +1,8 @@
 torch
-pytorch-pretrained-bert==0.4
+pytorch-pretrained-bert
 spacy
 scikit-learn
-keras
 tqdm
 numpy
 pandas
+matplotlib
