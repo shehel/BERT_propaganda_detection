@@ -164,7 +164,7 @@ def read_data(path: str, isLabels: bool = True, binary: str = None) -> list:
         ids.append(id)
         texts.append(f.read_text(encoding='utf-8'))
         if isLabels:
-            labels.append(parse_label(f.as_posix().replace('.txt', '.task3.labels'), binary=binary))
+            labels.append(parse_label(f.as_posix().replace('.txt', '.task-FLC.labels'), binary=binary))
     docs = list(nlp.pipe(texts))
 
     return [ids, docs, labels]

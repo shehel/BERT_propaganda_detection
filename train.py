@@ -82,7 +82,7 @@ def draw_curves(trainlosses, validlosses, f1scores, f1scores_word, task2_scores)
     
 def main():
     
-    #os.environ['CUDA_VISIBLE_DEVICES']='0,1,2,3,4'
+    os.environ['CUDA_VISIBLE_DEVICES']='0,1,2,3'
     make_logger()
     prop_tech_e, prop_tech, hash_token, end_token, p2id = settings(opt.techniques, opt.binaryLabel, opt.bio)
     logging.info("Training for class %s" % (opt.binaryLabel))
