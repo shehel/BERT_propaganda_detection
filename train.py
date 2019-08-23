@@ -1,14 +1,21 @@
 import pickle
 import logging
 from tokenize_text import *
-import tools.task3_scorer_onefile
+import tools_v0.task3_scorer_onefile
 from utils import *
 import numpy as np
 import pandas as pd
 import torch
-from pytorch_pretrained_bert import (BasicTokenizer, BertConfig,
-                                     BertForTokenClassification, BertTokenizer)
-from pytorch_pretrained_bert.optimization import BertAdam, WarmupLinearSchedule
+import pdb
+
+#from pytorch_pretrained_bert import (BasicTokenizer, BertConfig,
+#                                     BertForTokenClassification, BertTokenizer)
+#from pytorch_pretrained_bert.optimization import BertAdam, WarmupLinearSchedule
+
+from models import XLNetForTokenClassification, GPT2ForTokenClassification
+from pytorch_transformers import AdamW, WarmupLinearSchedule, WarmupCosineWithHardRestartsSchedule
+from pytorch_transformers import *
+
 from sklearn.metrics import f1_score
 from sklearn.metrics import precision_recall_fscore_support as f1
 from sklearn.model_selection import train_test_split
@@ -81,7 +88,14 @@ def draw_curves(trainlosses, validlosses, f1scores, f1scores_word, task2_scores)
     plt.savefig("exp/{}/{}/learning_curves.png".format(opt.classType, opt.expID))
     
 def main():
-    
+    MODEL_CLASSES = {
+    'robert':(RobertaConfig, roBertForTokenClassification,  RobertaTokenizer, 'roberta-base'),
+    'bert': (BertConfig, BertForTokenClassification, BertTokenizer, 'bert-base-uncased'),
+    'xlnet': (XLNetConfig, XLNetForTokenClassification, XLNetTokenizer, 'xlnet-base-cased'),
+    'xlm': (XLMConfig, XLMForSequenceClassification, XLMTokenizer, 'xlm-mlm-en-2048')
+    }
+    _, model_class, tokenizer_class, pretrained_weights = MODEL_CLASSES[opt.model]
+
     os.environ['CUDA_VISIBLE_DEVICES']='0,1,2,3'
     make_logger()
     prop_tech_e, prop_tech, hash_token, end_token, p2id = settings(opt.techniques, opt.binaryLabel, opt.bio)
@@ -89,6 +103,8 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     n_gpu = torch.cuda.device_count();
     
+    
+
     #random.seed(opt.seed)
     np.random.seed(opt.seed)
     torch.manual_seed(opt.seed)
@@ -97,8 +113,39 @@ def main():
         
     logging.info("GPUs Detected: %s" % (n_gpu))
     scorred_labels = list(range(1,(opt.nLabels-2)))
+    #pdb.set_trace()
+    if opt.loadModel:
+        print('Loading Model from {}'.format(opt.loadModel))
+        model = model_class.from_pretrained(opt.loadModel)
+        tokenizer = tokenizer_class.from_pretrained(opt.loadModel, do_lower_case=opt.lowerCase)
+        #tokenizer = tokenizer_class.from_pretrained(pretrained_weights, do_lower_case=opt.lowerCase)
 
-    tokenizer = BertTokenizer.from_pretrained(opt.model, do_lower_case=opt.lowerCase);
+        #model.load_state_dict(torch.load(opt.loadModel))
+        if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
+            try:
+                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
+            except FileNotFoundError:
+                os.mkdir("./exp/{}".format(opt.classType))
+                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
+    else:
+        
+
+        model = model_class.from_pretrained(pretrained_weights, num_labels=opt.nLabels)
+        
+        #tokenizer = tokenizer_class.from_pretrained(pretrained_weights, do_lower_case=opt.lowerCase)
+        tokenizer = tokenizer_class.from_pretrained(pretrained_weights, do_lower_case=opt.lowerCase)
+
+        print('Create new model')
+        if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
+            try:
+                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
+            except FileNotFoundError:
+                os.mkdir("./exp/{}".format(opt.classType))
+                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
+    # Model Initialize
+    
+    model.to(device)
+    
     print (hash_token, end_token)
     # Load Tokenized train and validation datasets
     tr_inputs, tr_tags, tr_masks, _ = make_set(p2id, opt.trainDataset, tokenizer, opt.binaryLabel, hash_token, end_token)
@@ -127,7 +174,7 @@ def main():
     
     ws[hash_token] = 0
     ws[end_token] = 0
-    ws = ws+0.3
+    ws = ws+0.9
     prob = [max(x) for x in ws[tr_tags]]
     weightage = [x + y for x, y in zip(prob, (len(prob)*[0.1]))]    
     
@@ -141,89 +188,50 @@ def main():
     
     # Create Dataloaders
     train_data = TensorDataset(tr_inputs, tr_masks, tr_tags)
-    train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
-    #train_sampler = RandomSampler(train_data)
+    #train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
+    train_sampler = SequentialSampler(train_data)
     train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=opt.trainBatch)
 
     valid_data = TensorDataset(val_inputs, val_masks, val_tags)
     valid_sampler = SequentialSampler(valid_data)
     valid_dataloader = DataLoader(valid_data, sampler=valid_sampler, batch_size=opt.trainBatch)
-
-    # Model Initialize
-    model = BertForTokenClassification.from_pretrained(opt.model, num_labels=opt.nLabels);
     
+    max_grad_norm = 1.0
+    num_total_steps = 225
+    num_warmup_steps = 100
+    warmup_proportion = float(num_warmup_steps) / float(num_total_steps)
+    #loss_scale = 0
+    #warmup_proportion = 0.1
+
+    num_train_optimization_steps = int(len(train_data) / opt.trainBatch ) * opt.nEpochs
+    t_total = len(train_data) // opt.nEpochs
+    print ("t_total______________________________", t_total)
+    # Prepare optimizer and schedule (linear warmup and decay)
+    no_decay = ['bias', 'LayerNorm.weight']
+    optimizer_grouped_parameters = [
+        {'params': [p for n, p in model.named_parameters() if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
+        {'params': [p for n, p in model.named_parameters() if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+    ]
+    
+    optimizer = AdamW(optimizer_grouped_parameters, lr=opt.LR, correct_bias=False)
+    #optimizer = torch.optim.SGD(mqodel.parameters(), lr=opt.LR, momentum=0.9)
+    scheduler = WarmupCosineWithHardRestartsSchedule(optimizer, warmup_steps=num_warmup_steps, t_total=num_train_optimization_steps, cycles=opt.nEpochs)
     if opt.fp16:
-        model.half()
-    model.to(device)
+        logging.info("Model training in FP16")
+        try:
+            from apex import amp
+        except ImportError:
+            raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use fp16 training.")
+        model, optimizer = amp.initialize(model, optimizer, opt_level='O1')
+        
+    # multi-gpu training (should be after apex fp16 initialization)
     if n_gpu > 1:
         model = torch.nn.DataParallel(model)
         logging.info("Training beginning on: %s" % n_gpu)
 
-
-    loss_scale = 0
-    warmup_proportion = 0.1
-
-    num_train_optimization_steps = int(len(train_data) / opt.trainBatch ) * opt.nEpochs
-    
-    # Prepare optimizer
-    param_optimizer = list(model.named_parameters())
-
-    # hack to remove pooler, which is not used
-    # thus it produce None grad that break apex
-    param_optimizer = [n for n in param_optimizer if 'pooler' not in n[0]]
-
-    no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
-    optimizer_grouped_parameters = [
-        {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
-        {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
-    ]
-    
-    if opt.fp16:
-            try:
-                from apex.optimizers import FP16_Optimizer
-                from apex.optimizers import FusedAdam
-            except ImportError:
-                raise ImportError("Please install apex from https://www.github.com/nvidia/apex to use distributed and fp16 training.")
-
-            optimizer = FusedAdam(optimizer_grouped_parameters,
-                                  lr=opt.LR,
-                                  bias_correction=False,
-                                  max_grad_norm=1.0)
-            if loss_scale == 0:
-                optimizer = FP16_Optimizer(optimizer, dynamic_loss_scale=True)
-            else:
-                optimizer = FP16_Optimizer(optimizer, static_loss_scale=0)
-            warmup_linear = WarmupLinearSchedule(warmup=warmup_proportion,
-                         t_total=num_train_optimization_steps)
-    # t_total matters
-    else:
-            optimizer = BertAdam(optimizer_grouped_parameters,
-                         lr=opt.LR,
-                         warmup=warmup_proportion,
-                         t_total=num_train_optimization_steps) 
-    
-    
-    if opt.loadModel:
-        print('Loading Model from {}'.format(opt.loadModel))
-        model.load_state_dict(torch.load(opt.loadModel))
-        if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
-            try:
-                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
-            except FileNotFoundError:
-                os.mkdir("./exp/{}".format(opt.classType))
-                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
-    else:
-        print('Create new model')
-        if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
-            try:
-                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
-            except FileNotFoundError:
-                os.mkdir("./exp/{}".format(opt.classType))
-                os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
-
     # F1 score shouldn't consider no-propaganda
     # and other auxiliary labels
-
+    #pdb.set_trace()
     global_step = 0
     nb_tr_steps = 0
     tr_loss = 0
@@ -240,6 +248,7 @@ def main():
         # Start only if train flag was passed
         if (opt.train):
             model.train()
+            
             tr_loss = 0
             nb_tr_examples, nb_tr_steps = 0, 0
             for step, batch in enumerate(tqdm(train_dataloader, desc="Iteration")):
@@ -250,24 +259,24 @@ def main():
                 # forward pass
                 loss = model(b_input_ids, token_type_ids=None,
                             attention_mask=b_input_mask, labels=b_labels)
+                loss = loss[0]
                 if n_gpu > 1:
                     loss = loss.mean()
 
                 # backward pass
                 if opt.fp16:
-                    optimizer.backward(loss)
+                    with amp.scale_loss(loss, optimizer) as scaled_loss:
+                        scaled_loss.backward()
+                    torch.nn.utils.clip_grad_norm_(amp.master_params(optimizer), max_grad_norm)
                 else:
                     loss.backward()
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+
                 tr_loss += loss.item()
                 nb_tr_examples += b_input_ids.size(0)
                 nb_tr_steps += 1
                 
-                if opt.fp16:
-                    # modify learning rate with special warm up BERT uses
-                    # if args.fp16 is False, BertAdam is used that handles this automatically
-                    lr_this_step = opt.LR * warmup_linear.get_lr(global_step, warmup_proportion)
-                    for param_group in optimizer.param_groups:
-                        param_group['lr'] = lr_this_step
+                scheduler.step()
                 optimizer.step()
                 optimizer.zero_grad()
                 global_step += 1
@@ -286,10 +295,14 @@ def main():
             with torch.no_grad():
                 tmp_eval_loss = model(b_input_ids, token_type_ids=None,
                                     attention_mask=b_input_mask, labels=b_labels)
+                tmp_eval_loss = tmp_eval_loss[0]
                 logits = model(b_input_ids, token_type_ids=None,
                             attention_mask=b_input_mask)
+                logits = logits[0]
+            #pdb.set_trace()
             logits = logits.detach().cpu().numpy()
             label_ids = b_labels.to('cpu').numpy()
+            
             predictions.extend([list(p) for p in np.argmax(logits, axis=2)])
             true_labels.append(label_ids)
             
@@ -300,6 +313,22 @@ def main():
             
             nb_eval_examples += b_input_ids.size(0)
             nb_eval_steps += 1
+        if i % opt.snapshot == 0:
+            if not os.path.exists("./exp/{}/{}/{}".format(opt.classType, opt.expID, i)):
+                try:
+                    os.mkdir("./exp/{}/{}/{}".format(opt.classType, opt.expID, i))
+                except FileNotFoundError:
+                    os.mkdir("./exp/{}/{}/{}".format(opt.classType, opt.expID, i))
+            #torch.save(
+            #    model.state_dict(), './exp/{}/{}/{}/model_{}.pth'.format(opt.classType, opt.expID, i, i))
+            #torch.save(
+            #    opt, './exp/{}/{}/{}/option.pth'.format(opt.classType, opt.expID, i))
+            #torch.save(
+            #    optimizer, './exp/{}/{}/{}/optimizer.pth'.format(opt.classType, opt.expID, i))
+            model_to_save = model.module if hasattr(model, 'module') else model  # Take care of distributed/parallel training
+            model_to_save.save_pretrained('./exp/{}/{}/{}/'.format(opt.classType, opt.expID, i))
+            tokenizer.save_pretrained('./exp/{}/{}/{}/'.format(opt.classType, opt.expID, i))
+ 
         pred_task2 = get_task2(predictions)
         logging.info("Precision, Recall, F1-Score, Support Task2: {}".format(f1(pred_task2, truth_task2, average=None)))
         f1_macro = f1_score(pred_task2, truth_task2, labels=scorred_labels, average="macro")
@@ -319,7 +348,7 @@ def main():
         if opt.loadModel:
             out_dir = opt.loadModel.rsplit('/', 1)[0] + "/pred." + postfix
         else:
-            out_dir = ("exp/{}/{}/temp_pred.csv".format(opt.classType, opt.expID))
+            out_dir = ("exp/{}/{}/{}/temp_pred.csv".format(opt.classType, opt.expID, i))
         df.to_csv(out_dir, sep='\t', index=False, header=False) 
         logging.info("Predictions written to: %s" % (out_dir))
 
@@ -328,37 +357,41 @@ def main():
         else:
             out_file = ("exp/{}/{}/temp_score.csv".format(opt.classType, opt.expID))
 
-        if opt.classType != "binary":
+        if opt.classType == "binary":
             char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", opt.techniques, "-l", out_file])
         else:
-            char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", opt.techniques, "-f", "-l", out_file])
+            #char_predict = tools.task3_scorer_onefile.main(["-s", out_dir, "-r", opt.testDataset, "-t", opt.techniques, "-f", "-l", out_file])
+            a = os.popen("python tools/task-FLC_scorer.py -s " + out_dir+ " -r "+opt.testDataset).read()
+            char_predict = float(a.split("F1=")[1].split("\n")[0])
+            logging.info(a)    
         f1_scores.append(char_predict) 
         print (char_predict)
          
         # early_stopping needs the validation loss to check if it has decresed, 
         # and if it has, it will make a checkpoint of the current model
         if not opt.train:
+
+            with open('predictions', 'wb') as fp:
+                pickle.dump(predictions, fp)
+
+            with open('val', 'wb') as fp:
+                pickle.dump(val_tags, fp)
+
+            with open('val_inp', 'wb') as fp:
+                pickle.dump(cleaned, fp)
+            #with open('val_mask', 'wb') as fp:
+            #    pickle.dump(flat_list_s, fp)
+            
             break
-        early_stopping(char_predict*(-1), model)
+        with open('predictions_train', 'wb') as fp:
+                pickle.dump(predictions, fp)
+        early_stopping(char_predict*(-1), model, tokenizer)
         
         if early_stopping.early_stop:
             logging.info("Early stopping")
             break
         # Save checkpoints
-        if i % opt.snapshot == 0:
-            if not os.path.exists("./exp/{}/{}/{}".format(opt.classType, opt.expID, i)):
-                try:
-                    os.mkdir("./exp/{}/{}/{}".format(opt.classType, opt.expID, i))
-                except FileNotFoundError:
-                    os.mkdir("./exp/{}/{}/{}".format(opt.classType, opt.expID, i))
-            torch.save(
-                model.state_dict(), './exp/{}/{}/{}/model_{}.pth'.format(opt.classType, opt.expID, i, i))
-            torch.save(
-                opt, './exp/{}/{}/{}/option.pth'.format(opt.classType, opt.expID, i))
-            torch.save(
-                optimizer, './exp/{}/{}/{}/optimizer.pth'.format(opt.classType, opt.expID, i))
-
-        
+       
         # Save model based on best F1 score and if epoch is greater than 3
         '''if f1_macro > best and i > 3:
         # Save a trained model and the associated configuration

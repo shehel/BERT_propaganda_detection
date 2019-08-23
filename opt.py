@@ -31,7 +31,7 @@ parser.add_argument('--seed', default = 984, type=int,
 parser.add_argument('--fp16', default = False, type=bool,
                     help='Half precision training')
 "----------------------------- Model options -----------------------------"
-parser.add_argument('--model', default="bert-base-cased", type=str,
+parser.add_argument('--model', default=0, type=str,
                     help='Select a model to be trained: bert-base-cased|bert-base-uncased|bert-large-uncased|bert-large-cased')
 parser.add_argument('--lowerCase', default=False, type=bool,
                     help='Set to true if using a uncased model')
@@ -40,7 +40,7 @@ parser.add_argument('--nLabels', default=21, type=int,
 parser.add_argument('--loadModel', default=None, type=str,
                     help='Provide full path to a previously trained model')
 
-parser.add_argument('--maxLen', default=210, type=float,
+parser.add_argument('--maxLen', default=256, type=float,
                     help='Max length of tokens in a single training sample')
 
 "----------------------------- Hyperparameter options -----------------------------"
