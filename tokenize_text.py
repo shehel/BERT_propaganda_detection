@@ -28,15 +28,7 @@ def pad_sequences(sequences: list, batch_first: bool = True, padding_value: int 
 
     return out_tensor.long().numpy()
 
-# def set_global_label(bio: bool = False) -> None:
-#     global hash_token
-#     global end_token 
-#     if bio:
-#         hash_token = 3
-#         end_token = 4
-#     else:
-#         hash_token = 2
-#         end_token = 3
+
 
 def reg_encoding(cleaned: list, labels: list, hash_token, end_token) -> list:
     label_l = []
