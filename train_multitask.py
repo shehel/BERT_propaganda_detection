@@ -1,7 +1,6 @@
 import pickle
 import logging
 from tokenize_text import *
-import tools_v0.task3_scorer_onefile
 from utils import *
 import numpy as np
 import pandas as pd
@@ -97,19 +96,20 @@ def main():
     logging.info("GPUs Detected: %s" % (n_gpu))
 
     logging.info("Setting up dataloader")
-    tasks= ["Name_Calling,Labeling"]
+    rtasks = ["Name_Calling,Labeling"]
 
-    #tasks = ["Appeal_to_Authority", "Appeal_to_fear-prejudice", "Bandwagon", "Black-and-White_Fallacy",
-            # "Causal_Oversimplification", "Doubt", "Exaggeration,Minimisation", "Flag-Waving", "Loaded_Language",
-            # "Name_Calling,Labeling", "Obfuscation,Intentional_Vagueness,Confusion", "Red_Herring", "Reductio_ad_hitlerum",
-            # "Repetition", "Slogans", "Straw_Men", "Thought-terminating_Cliches", "Whataboutism"]
+    tasks = ["Appeal_to_Authority", "Appeal_to_fear-prejudice", "Bandwagon", "Black-and-White_Fallacy",
+             "Causal_Oversimplification", "Doubt", "Exaggeration,Minimisation", "Flag-Waving", "Loaded_Language",
+             "Name_Calling,Labeling", "Obfuscation,Intentional_Vagueness,Confusion", "Red_Herring", "Reductio_ad_hitlerum",
+             "Repetition", "Slogans", "Straw_Men", "Thought-terminating_Cliches", "Whataboutism"]
     num_tasks = len(tasks)
     if opt.loadModel:
         print('Loading Model from {}'.format(opt.loadModel))
         model = model_class.from_pretrained(opt.loadModel, tasks = num_tasks)
-        tokenizer = tokenizer_class.from_pretrained(opt.loadModel, do_lower_case=opt.lowerCase)
+        #tokenizer = tokenizer_class.from_pretrained(opt.loadModel, do_lower_case=opt.lowerCase)
 
         #model.load_state_dict(torch.load(opt.loadModel))
+        tokenizer = tokenizer_class.from_pretrained(pretrained_weights, do_lower_case=opt.lowerCase)
         if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
             try:
                 os.mkdir("./exp/{}/{}".format(opt.classType, opt.expID))
@@ -181,8 +181,8 @@ def main():
         
         # Create Dataloaders
         train_data = TensorDataset(tr_inputs, tr_masks, tr_tags)
-        train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=False)
-        #train_sampler = SequentialSampler(train_data)
+        #train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=False)
+        train_sampler = SequentialSampler(train_data)
         train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=opt.trainBatch)
 
         valid_data = TensorDataset(val_inputs, val_masks, val_tags)
@@ -195,12 +195,12 @@ def main():
     
     max_grad_norm = 1.0
     num_total_steps = 113
-    num_warmup_steps = 50
+    num_warmup_steps = 100
     warmup_proportion = float(num_warmup_steps) / float(num_total_steps)
     #loss_scale = 0
     #warmup_proportion = 0.1
 
-    num_train_optimization_steps = 100 * opt.nEpochs
+    num_train_optimization_steps = 1000 * opt.nEpochs
     t_total = len(train_data) // opt.nEpochs
     print ("t_total______________________________", t_total)
     # Prepare optimizer and schedule (linear warmup and decay)
@@ -245,7 +245,7 @@ def main():
             tr_loader_iters = [iter(train_loader) for train_loader in tr_loaders]
             tr_loss = 0
             nb_tr_examples, nb_tr_steps = 0, 0
-            for step in trange(100, desc="Iterations"):
+            for step in trange(1000, desc="Iterations"):
             #for batch in tqdm(tr_loaders[0]):
             # TRAIN loop
             # Start only if train flag was passed

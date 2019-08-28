@@ -117,8 +117,8 @@ def main():
     if opt.loadModel:
         print('Loading Model from {}'.format(opt.loadModel))
         model = model_class.from_pretrained(opt.loadModel)
-        tokenizer = tokenizer_class.from_pretrained(opt.loadModel, do_lower_case=opt.lowerCase)
-        #tokenizer = tokenizer_class.from_pretrained(pretrained_weights, do_lower_case=opt.lowerCase)
+        #tokenizer = tokenizer_class.from_pretrained(opt.loadModel, do_lower_case=opt.lowerCase)
+        tokenizer = tokenizer_class.from_pretrained(pretrained_weights, do_lower_case=opt.lowerCase)
 
         #model.load_state_dict(torch.load(opt.loadModel))
         if not os.path.exists("./exp/{}/{}".format(opt.classType, opt.expID)):
@@ -174,7 +174,7 @@ def main():
     
     ws[hash_token] = 0
     ws[end_token] = 0
-    ws = ws+0.9
+    ws = ws+0.3
     prob = [max(x) for x in ws[tr_tags]]
     weightage = [x + y for x, y in zip(prob, (len(prob)*[0.1]))]    
     
@@ -188,8 +188,8 @@ def main():
     
     # Create Dataloaders
     train_data = TensorDataset(tr_inputs, tr_masks, tr_tags)
-    #train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
-    train_sampler = SequentialSampler(train_data)
+    train_sampler = WeightedRandomSampler(weights=weightage, num_samples=len(tr_tags),replacement=True)
+    #train_sampler = SequentialSampler(train_data)
     train_dataloader = DataLoader(train_data, sampler=train_sampler, batch_size=opt.trainBatch)
 
     valid_data = TensorDataset(val_inputs, val_masks, val_tags)
@@ -215,7 +215,8 @@ def main():
     
     optimizer = AdamW(optimizer_grouped_parameters, lr=opt.LR, correct_bias=False)
     #optimizer = torch.optim.SGD(mqodel.parameters(), lr=opt.LR, momentum=0.9)
-    scheduler = WarmupCosineWithHardRestartsSchedule(optimizer, warmup_steps=num_warmup_steps, t_total=num_train_optimization_steps, cycles=opt.nEpochs)
+    scheduler = WarmupConstantSchedule(optimizer, warmup_steps = num_warmup_steps)
+    #scheduler = WarmupCosineWithHardRestartsSchedule(optimizer, warmup_steps=num_warmup_steps, t_total=num_train_optimization_steps, cycles=opt.nEpochs)
     if opt.fp16:
         logging.info("Model training in FP16")
         try:
@@ -243,6 +244,7 @@ def main():
     f1_scores = []
     f1_scores_word = []
     task2_scores = []
+    best = 0
     for i in trange(opt.nEpochs, desc="Epoch"):
         # TRAIN loop
         # Start only if train flag was passed
@@ -366,29 +368,31 @@ def main():
             logging.info(a)    
         f1_scores.append(char_predict) 
         print (char_predict)
-         
+        if char_predict > best:
+            best = char_predict 
         # early_stopping needs the validation loss to check if it has decresed, 
         # and if it has, it will make a checkpoint of the current model
-        if not opt.train:
+        # if not opt.train:
 
-            with open('predictions', 'wb') as fp:
-                pickle.dump(predictions, fp)
+        #     with open('predictions', 'wb') as fp:
+        #         pickle.dump(predictions, fp)
 
-            with open('val', 'wb') as fp:
-                pickle.dump(val_tags, fp)
+        #     with open('val', 'wb') as fp:
+        #         pickle.dump(val_tags, fp)
 
-            with open('val_inp', 'wb') as fp:
-                pickle.dump(cleaned, fp)
-            #with open('val_mask', 'wb') as fp:
-            #    pickle.dump(flat_list_s, fp)
+        #     with open('val_inp', 'wb') as fp:
+        #         pickle.dump(cleaned, fp)
+        #     #with open('val_mask', 'wb') as fp:
+        #     #    pickle.dump(flat_list_s, fp)
             
-            break
-        with open('predictions_train', 'wb') as fp:
-                pickle.dump(predictions, fp)
+        #     break
+        # with open('predictions_train', 'wb') as fp:
+        #         pickle.dump(predictions, fp)
         early_stopping(char_predict*(-1), model, tokenizer)
         
         if early_stopping.early_stop:
             logging.info("Early stopping")
+            print ("Best Score: ",best)
             break
         # Save checkpoints
        
@@ -408,6 +412,7 @@ def main():
             logging.info("New best model")
         '''
     if opt.train:
+        print ("Best Score: ",best)
         logging.info("Training Finished. Learning curves saved.")
         draw_curves(train_losses, valid_losses, f1_scores, f1_scores_word, task2_scores)
         #df = pd.DataFrame({'col':trainlosses})
