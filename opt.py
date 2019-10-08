@@ -22,6 +22,8 @@ parser.add_argument('--outputFile', default="pred_local.csv", type=str,
                     help='Directory and name of the file to store predictions.')
 parser.add_argument('--bio', default=False, type=bool,
                     help='Activate bio encoding')
+parser.add_argument('--bology', default=False, type=bool,
+                    help='Run Bertology methods')
 parser.add_argument('--techniques', default="tools/data/propaganda-techniques-names.txt", type=str,
                     help='Directory and name of the file that contains names of the techniques.')
 parser.add_argument('--train', default = False, type=bool,
