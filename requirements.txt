@@ -1,6 +1,6 @@
 torch
 pytorch-pretrained-bert
-spacy
+spacy==2.0.18
 scikit-learn
 tqdm
 numpy

@@ -1,46 +1,40 @@
-# We assume that you have downloaded the input data
-# and that you have unzipped it in datasets (you can also edit $DATA_DIR)
+#!/bin/bash
 
-DATA_DIR=datasets # training set articles are supposed to be in folder $DATA_DIR/train-articles
-NUMBER_OF_ARTICLES_IN_TRAIN_TRAIN_PARTITION=245 # 70% of the training set articles will be in train-train
-let "NUMBER_OF_ARTICLES_IN_TRAIN_DEV_PARTITION = `ls -1 $DATA_DIR/train-articles/*.txt | wc -l` - $NUMBER_OF_ARTICLES_IN_TRAIN_TRAIN_PARTITION"
-RANDOM_SOURCE=$0 # seed for random splitting of articles into train-train and train-dev (change it to modify the splitting)
+## Author: Preslav Nakov
 
-# The data split will be saved in TRAIN_TRAIN_SPLIT_DIR and TRAIN_DEV_SPLIT_DIR
-TRAIN_TRAIN_SPLIT_DIR=${DATA_DIR}/train-train
-TRAIN_DEV_SPLIT_DIR=${DATA_DIR}/train-dev
+# We assume that you have downloaded the input data 
+# from https://s3.us-east-2.amazonaws.com/propaganda-datathon/dataset/datasets-v4.zip
+# and that you have unzipped it in datasets-v4 (you can also edit $DATA_DIR)
 
-echo "Splitting folders $DATA_DIR/train-articles, $DATA_DIR/train-labels-SLC, $DATA_DIR/train-labels-FLC into two subsets"
+export DATA_DIR=datasets-v2/
 
-# Creating output folders or deleting existing articles in them
-for d in "${TRAIN_TRAIN_SPLIT_DIR}-articles" "${TRAIN_TRAIN_SPLIT_DIR}-labels-SLC" "${TRAIN_TRAIN_SPLIT_DIR}-labels-FLC" "${TRAIN_DEV_SPLIT_DIR}-articles" "${TRAIN_DEV_SPLIT_DIR}-labels-SLC" "${TRAIN_DEV_SPLIT_DIR}-labels-FLC"; do
-    rm $d/* 2>/dev/null || mkdir -p $d
-done
+# The data split will be produced in TRAIN_SPLIT_DIR
+export TRAIN_SPLIT_DIR=train-split
+mkdir -p $TRAIN_SPLIT_DIR/task-1 || exit 1
 
-# Get article list
-article_list=`find $DATA_DIR/train-articles -name 'article*.txt' -exec basename {} \; | sed 's/article//g' | sed 's/.txt//g' | sort -R --random-source $RANDOM_SOURCE`
 
-# Saving articles to train-train
-for i in `echo $article_list | tr " " "\n" | head -n $NUMBER_OF_ARTICLES_IN_TRAIN_TRAIN_PARTITION`; do
-    
-    cp $DATA_DIR/train-articles/article${i}.txt ${TRAIN_TRAIN_SPLIT_DIR}-articles/
-    cp $DATA_DIR/train-labels-SLC/article${i}.task-SLC.labels ${TRAIN_TRAIN_SPLIT_DIR}-labels-SLC/
-    cp $DATA_DIR/train-labels-FLC/article${i}.task-FLC.labels ${TRAIN_TRAIN_SPLIT_DIR}-labels-FLC/
+## Task 1
+echo Preparing the data for Task 1
+sort $DATA_DIR/task-1/task1.train.txt | head -n 31993 \
+	> $TRAIN_SPLIT_DIR/task-1/task1.train-train.txt || exit 2
+sort $DATA_DIR/task-1/task1.train.txt | tail -n 4000 \
+	> $TRAIN_SPLIT_DIR/task-1/task1.train-dev.txt || exit 3
+cut -f 2,3 $TRAIN_SPLIT_DIR/task-1/task1.train-dev.txt \
+	> $TRAIN_SPLIT_DIR/task-1/train-dev.task1.labels || exit 4
+cut -f 2,3 $TRAIN_SPLIT_DIR/task-1/task1.train-train.txt \
+	> $TRAIN_SPLIT_DIR/task-1/train-train.task1.labels || exit 5
 
-done
+## Tasks 2-3
+echo Preparing the data for Tasks 2 and 3
+mkdir -p $TRAIN_SPLIT_DIR/tasks-2-3 || exit 6
+cp -r $DATA_DIR/datasets/train-articles $TRAIN_SPLIT_DIR/tasks-2-3/train-train || exit 7
+cp $DATA_DIR/datasets/train-labels-FLC/* $TRAIN_SPLIT_DIR/tasks-2-3/train-train/ || exit 7
 
-# Saving articles to train-dev
-for i in `echo $article_list | tr " " "\n" | tail -n $NUMBER_OF_ARTICLES_IN_TRAIN_DEV_PARTITION`; do
-    
-    cp $DATA_DIR/train-articles/article${i}.txt ${TRAIN_DEV_SPLIT_DIR}-articles/
-    cp $DATA_DIR/train-labels-SLC/article${i}.task-SLC.labels ${TRAIN_DEV_SPLIT_DIR}-labels-SLC/
-    cp $DATA_DIR/train-labels-FLC/article${i}.task-FLC.labels ${TRAIN_DEV_SPLIT_DIR}-labels-FLC/
-
-done
-
-# Printing output stats
-for d in "${TRAIN_TRAIN_SPLIT_DIR}-articles" "${TRAIN_TRAIN_SPLIT_DIR}-labels-SLC" "${TRAIN_TRAIN_SPLIT_DIR}-labels-FLC" "${TRAIN_DEV_SPLIT_DIR}-articles" "${TRAIN_DEV_SPLIT_DIR}-labels-SLC" "${TRAIN_DEV_SPLIT_DIR}-labels-FLC"; do
-
-    echo "created output folder $d ("`ls -1 $d | wc -l`" articles )"
-
-done
+mkdir $TRAIN_SPLIT_DIR/tasks-2-3/train-dev || exit 8
+cd $TRAIN_SPLIT_DIR/tasks-2-3/train-train || exit 9
+for i in `ls -1 *.txt | head -n 43 | cut -d "." -f 1`; do mv $i.txt $i.task-FLC.labels $i.task2.labels ../train-dev; done || exit 10
+cd ../train-dev || exit 11
+cat *.task2.labels > ../train-dev.task2.labels || exit 12
+cat *.task3.labels > ../train-dev.task3.labels || exit 13
+cd ../../.. || exit 14
+cp $DATA_DIR/tasks-2-3/propaganda-techniques-names.txt $TRAIN_SPLIT_DIR/tasks-2-3/propaganda-techniques-names.txt || exit 15
