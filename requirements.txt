@@ -1,4 +1,5 @@
 torch
+pytorch-transformers
 spacy==2.0.18
 scikit-learn
 tqdm
