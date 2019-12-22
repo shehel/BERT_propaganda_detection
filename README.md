@@ -1,7 +1,8 @@
 # task3
 Sequence classification for propaganda dataset (QCRI)
 
-1. ```pip install -r requirements.txt``` 
+1. ```pip install -r requirements.txt```
+2. Download pytorch-transformers v1.0 [here](https://github.com/huggingface/transformers/releases?after=1.0). Extract and cd into the download directory. Then ```pip install .``` to install the package. 
 2. ```python -m spacy download en```
 3. To create train, dev sets out of the training data: ```sh tools_v0/split-train.sh``` 
 4. Raw dataset is converted into intermediate pickle files by running preprocess.py on it. Run preprocess.py to generate train and dev files.
