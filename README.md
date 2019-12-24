@@ -1,6 +1,7 @@
-# task3
-Sequence classification for propaganda dataset (QCRI)
 
+## Sequence classification for propaganda dataset (QCRI)
+
+Official PyTorch implementation of the paper [Fine-Grained Propaganda Detection with Fine-Tuned BERT](https://www.aclweb.org/anthology/D19-5011.pdf).
 
 1. ```pip install -r requirements.txt```
 2. ```python -m spacy download en```
