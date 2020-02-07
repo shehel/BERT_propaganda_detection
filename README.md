@@ -14,7 +14,7 @@ eg: <br>
 <br>-l flag preserves labels if included (needed even when labels aren't available).  
 5. Run the trainer, for example <br>
 
-```python train.py --expID test_run1--trainDataset train-train.p --evalDataset train-dev.p --model bert --LR 3e-5 --trainBatch 32 --nEpochs 5 --classType all_class --nLabels 21 --testDataset datasets-v2/tasks-2-3/dev --train True --lowerCase True & ``` <br>
+```python train.py --expID test_run1--trainDataset train-train.p --evalDataset train-dev.p --model bert --LR 3e-5 --trainBatch 32 --nEpochs 5 --classType all_class --nLabels 21 --testDataset train-split/tasks-2-3/train-dev/ --train True --lowerCase True & ``` <br>
 Here, train.p and dev.p is obtained by running ```preprocess.py```. <br>
 6. ```./exp``` directory contains the logs and model states for training runs. 
 
